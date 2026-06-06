@@ -1,0 +1,611 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Gig — Setlist</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0c0a10; --bg2:#15121d; --panel:#1b1726; --panel2:#221d30;
+    --line:#322a42; --txt:#f3eefb; --mut:#9a90ad; --mut2:#6f6682;
+    --gold:#e8b04b; --gold-d:#3a2e16;
+    --a:#e8b04b;   --a-d:#3a2e16;   /* performer A */
+    --b:#42c8c0;   --b-d:#0f3331;   /* performer B */
+    --both:#b07bff; --both-d:#2c1d44;/* both */
+    --display:'Fraunces',Georgia,serif;
+    --ui:'DM Sans',system-ui,-apple-system,sans-serif;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;padding:0}
+  body{
+    font-family:var(--ui); background:
+      radial-gradient(120% 60% at 50% -10%, #221934 0%, transparent 60%),
+      var(--bg);
+    color:var(--txt); min-height:100vh; padding-bottom:84px;
+    -webkit-font-smoothing:antialiased;
+  }
+  button{font-family:var(--ui); cursor:pointer; border:none; background:none; color:inherit}
+  input,textarea,select{font-family:var(--ui); font-size:16px}
+  .hide{display:none!important}
+
+  /* Header */
+  header{
+    position:sticky; top:0; z-index:30; padding:14px 16px 10px;
+    background:linear-gradient(180deg,#15101f 70%, rgba(21,16,31,0));
+    backdrop-filter:blur(8px);
+  }
+  .brand{display:flex; align-items:baseline; gap:9px}
+  .brand h1{font-family:var(--display); font-weight:600; font-size:24px; margin:0; letter-spacing:-.5px}
+  .brand .dot{width:9px;height:9px;border-radius:50%;background:var(--gold);box-shadow:0 0 12px var(--gold)}
+  .brand small{color:var(--mut); font-size:12.5px; margin-left:auto; font-weight:500}
+
+  /* Search */
+  .search{margin-top:11px; position:relative}
+  .search input{
+    width:100%; padding:13px 14px 13px 42px; border-radius:13px;
+    background:var(--panel); border:1px solid var(--line); color:var(--txt); outline:none;
+  }
+  .search input:focus{border-color:var(--gold)}
+  .search svg{position:absolute; left:14px; top:13px; opacity:.5}
+  .filters{display:flex; gap:7px; margin-top:9px; overflow-x:auto; -webkit-overflow-scrolling:touch}
+  .chip{padding:7px 13px; border-radius:20px; background:var(--panel); border:1px solid var(--line);
+    color:var(--mut); font-size:13px; font-weight:600; white-space:nowrap}
+  .chip.on{color:var(--bg); }
+  .chip.on[data-f="all"]{background:var(--gold); border-color:var(--gold)}
+  .chip.on[data-f="a"]{background:var(--a); border-color:var(--a)}
+  .chip.on[data-f="b"]{background:var(--b); border-color:var(--b)}
+  .chip.on[data-f="both"]{background:var(--both); border-color:var(--both); color:#fff}
+
+  main{padding:6px 14px 20px}
+
+  /* Song rows */
+  .count{color:var(--mut2); font-size:12.5px; margin:10px 2px 6px; font-weight:600; text-transform:uppercase; letter-spacing:.6px}
+  .row{
+    display:flex; align-items:center; gap:12px; padding:13px 13px; border-radius:14px;
+    background:var(--panel); margin-bottom:8px; border:1px solid transparent; position:relative;
+  }
+  .row:active{background:var(--panel2)}
+  .bar{width:4px; align-self:stretch; border-radius:4px; flex:0 0 4px}
+  .bar.a{background:var(--a)} .bar.b{background:var(--b)} .bar.both{background:var(--both)}
+  .row .nm{flex:1; min-width:0}
+  .row .nm b{font-weight:600; font-size:16px; display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+  .row .nm span{color:var(--mut); font-size:12.5px}
+  .key{font-family:var(--display); font-weight:600; font-size:17px; padding:5px 11px; border-radius:9px;
+    background:var(--panel2); min-width:42px; text-align:center}
+  .key.a{color:var(--a); background:var(--a-d)}
+  .key.b{color:var(--b); background:var(--b-d)}
+  .key.both{color:var(--both); background:var(--both-d)}
+  .setdots{display:flex; gap:3px; position:absolute; right:11px; bottom:7px}
+  .setdots i{width:5px;height:5px;border-radius:50%;background:var(--gold);opacity:.85}
+  .empty{color:var(--mut2); text-align:center; padding:50px 20px; font-size:14.5px; line-height:1.6}
+
+  /* Set cards */
+  .infocard{background:linear-gradient(135deg,#1e1830,#181323); border:1px solid var(--line);
+    border-radius:14px; padding:13px 15px; margin-bottom:12px}
+  .infocard b{font-family:var(--display); font-size:15px}
+  .infocard p{margin:5px 0 0; color:var(--mut); font-size:13px; line-height:1.5}
+  .setcard{background:var(--panel); border:1px solid var(--line); border-radius:16px; margin-bottom:13px; overflow:hidden}
+  .sethead{display:flex; align-items:center; gap:11px; padding:14px 15px}
+  .sethead .t{flex:1}
+  .sethead .time{font-family:var(--display); font-weight:600; font-size:20px; color:var(--gold); min-width:58px}
+  .sethead .t b{display:block; font-size:16px; font-weight:600}
+  .sethead .t small{color:var(--mut); font-size:12.5px; display:block; margin-top:2px; line-height:1.45}
+  .prog{font-size:12.5px; font-weight:700; padding:5px 10px; border-radius:9px; background:var(--panel2); color:var(--mut)}
+  .prog.ok{background:var(--gold-d); color:var(--gold)}
+  .setsongs{padding:0 12px 12px}
+  .ss{display:flex; align-items:center; gap:10px; padding:10px 11px; background:var(--panel2);
+    border-radius:11px; margin-bottom:7px}
+  .ss .nb{width:22px; text-align:center; color:var(--mut2); font-weight:700; font-size:13px; flex:0 0 22px}
+  .ss .info{flex:1; min-width:0}
+  .ss .info b{font-weight:600; font-size:15px; display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+  .ss .mini{font-family:var(--display); font-weight:600; font-size:14px; padding:3px 8px; border-radius:7px; background:var(--panel)}
+  .ss .mini.a{color:var(--a)} .ss .mini.b{color:var(--b)} .ss .mini.both{color:var(--both)}
+  .ssbtn{padding:6px 8px; color:var(--mut2); font-size:18px; line-height:1}
+  .playset{width:100%; padding:12px; background:var(--gold-d); color:var(--gold); font-weight:700;
+    border-radius:11px; font-size:14.5px; margin-top:3px}
+  .playset:active{filter:brightness(1.2)}
+
+  /* Bottom nav */
+  nav{position:fixed; bottom:0; left:0; right:0; z-index:40; display:flex;
+    background:#120e1b; border-top:1px solid var(--line); padding:8px 0 calc(8px + env(safe-area-inset-bottom))}
+  nav button{flex:1; display:flex; flex-direction:column; align-items:center; gap:3px; color:var(--mut2); font-size:11px; font-weight:600; padding:4px}
+  nav button.on{color:var(--gold)}
+  nav button svg{width:23px;height:23px}
+
+  /* Detail / Performance overlay */
+  .ov{position:fixed; inset:0; z-index:60; background:var(--bg); display:flex; flex-direction:column;
+    transform:translateY(100%); transition:transform .25s ease; visibility:hidden}
+  .ov.show{transform:translateY(0); visibility:visible}
+  .ovbar{display:flex; align-items:center; gap:12px; padding:14px 16px calc(8px); border-bottom:1px solid var(--line)}
+  .ovbar .close{font-size:26px; line-height:1; color:var(--mut); width:30px}
+  .ovbar .grow{flex:1; min-width:0}
+  .ovbar .grow b{font-family:var(--display); font-size:19px; font-weight:600; display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+  .ovbar .grow small{color:var(--mut); font-size:12.5px}
+  .keybig{font-family:var(--display); font-weight:700; font-size:26px; padding:6px 14px; border-radius:11px; background:var(--panel2)}
+  .keybig.a{color:var(--a);background:var(--a-d)} .keybig.b{color:var(--b);background:var(--b-d)} .keybig.both{color:var(--both);background:var(--both-d)}
+  .lyrics{flex:1; overflow-y:auto; padding:20px 18px 40px; white-space:pre-wrap; line-height:1.55;
+    font-size:var(--lsz,22px); -webkit-overflow-scrolling:touch}
+  .lyrics.empty2{color:var(--mut2); font-style:italic; font-size:16px}
+  .ovctrl{display:flex; align-items:center; gap:10px; padding:10px 14px calc(10px + env(safe-area-inset-bottom));
+    border-top:1px solid var(--line); background:#120e1b}
+  .ovctrl .sz{display:flex; gap:6px}
+  .ovctrl .sz button{width:38px;height:38px;border-radius:10px;background:var(--panel);font-size:18px;font-weight:700;color:var(--txt)}
+  .navbtn{flex:1; padding:13px; border-radius:12px; background:var(--panel); font-weight:700; font-size:15px; display:flex; align-items:center; justify-content:center; gap:6px}
+  .navbtn.main{background:var(--gold-d); color:var(--gold)}
+  .navbtn:disabled{opacity:.3}
+  .pos{font-size:13px; color:var(--mut); font-weight:700; min-width:46px; text-align:center}
+
+  /* Edit / forms */
+  .field{margin-bottom:13px}
+  .field label{display:block; font-size:12.5px; color:var(--mut); font-weight:600; margin-bottom:6px; text-transform:uppercase; letter-spacing:.5px}
+  .field input,.field textarea,.field select{width:100%; padding:12px 13px; border-radius:11px; background:var(--panel); border:1px solid var(--line); color:var(--txt); outline:none}
+  .field textarea{min-height:160px; resize:vertical; line-height:1.5}
+  .field input:focus,.field textarea:focus,.field select:focus{border-color:var(--gold)}
+  .singpick{display:flex; gap:8px}
+  .singpick button{flex:1; padding:11px; border-radius:11px; background:var(--panel); border:1px solid var(--line); font-weight:600; font-size:14px; color:var(--mut)}
+  .singpick button.on.a{background:var(--a-d); color:var(--a); border-color:var(--a)}
+  .singpick button.on.b{background:var(--b-d); color:var(--b); border-color:var(--b)}
+  .singpick button.on.both{background:var(--both-d); color:var(--both); border-color:var(--both)}
+  .setpick{display:flex; flex-wrap:wrap; gap:8px}
+  .setpick button{padding:9px 13px; border-radius:11px; background:var(--panel); border:1px solid var(--line); font-size:13.5px; font-weight:600; color:var(--mut); display:flex; gap:7px; align-items:center}
+  .setpick button.on{background:var(--gold-d); color:var(--gold); border-color:var(--gold)}
+  .btn{display:block; width:100%; padding:14px; border-radius:13px; font-weight:700; font-size:15px; text-align:center}
+  .btn.primary{background:var(--gold); color:#1a1206}
+  .btn.ghost{background:var(--panel); color:var(--txt); border:1px solid var(--line)}
+  .btn.danger{background:#3a1620; color:#ff8095; border:1px solid #5a2030}
+  .btn+.btn{margin-top:9px}
+  .sec{font-family:var(--display); font-weight:600; font-size:19px; margin:20px 2px 12px}
+  .hint{color:var(--mut2); font-size:13px; line-height:1.6; margin:0 2px 12px}
+  .hint code{background:var(--panel); padding:2px 6px; border-radius:5px; color:var(--gold); font-size:12.5px}
+  .toast{position:fixed; bottom:96px; left:50%; transform:translateX(-50%) translateY(20px); opacity:0;
+    background:var(--gold); color:#1a1206; padding:11px 18px; border-radius:12px; font-weight:700; font-size:14px; z-index:90; transition:.25s; pointer-events:none}
+  .toast.show{opacity:1; transform:translateX(-50%) translateY(0)}
+  .two{display:flex; gap:10px}
+  .two>*{flex:1}
+</style>
+
+<header>
+  <div class="brand">
+    <span class="dot"></span>
+    <h1>Fešta</h1>
+    <small id="hdrcount">0 pjesama</small>
+  </div>
+  <div class="search" id="searchWrap">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+    <input id="q" placeholder="Traži pjesmu…" autocomplete="off" autocorrect="off">
+  </div>
+  <div class="filters" id="filters">
+    <button class="chip on" data-f="all">Sve</button>
+    <button class="chip" data-f="a" id="fa">Josip</button>
+    <button class="chip" data-f="b" id="fb">Pjero</button>
+    <button class="chip" data-f="both">Oba</button>
+    <button class="chip" data-f="noset">Bez seta</button>
+  </div>
+</header>
+
+<main>
+  <div id="view-songs"></div>
+  <div id="view-sets" class="hide"></div>
+  <div id="view-add" class="hide"></div>
+</main>
+
+<nav>
+  <button data-tab="songs" class="on" id="t-songs">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+    Pjesme</button>
+  <button data-tab="sets" id="t-sets">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>
+    Setovi</button>
+  <button data-tab="add" id="t-add">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+    Unos</button>
+</nav>
+
+<!-- Song detail / edit overlay -->
+<div class="ov" id="detail">
+  <div class="ovbar">
+    <button class="close" data-act="closeDetail">✕</button>
+    <div class="grow"><b id="d-name">—</b><small id="d-sub"></small></div>
+    <button class="navbtn" style="flex:0;padding:9px 13px;background:var(--panel)" data-act="editSong">Uredi</button>
+  </div>
+  <div class="lyrics" id="d-lyrics"></div>
+  <div class="ovctrl">
+    <div class="sz"><button data-act="szm">A−</button><button data-act="szp">A+</button></div>
+    <a class="navbtn" id="d-tekst" target="_blank" rel="noopener" style="flex:0;padding:13px 15px;text-decoration:none;white-space:nowrap">📄 Tekst ↗</a>
+    <button class="navbtn main" data-act="perfFromDetail">▶ Sviraj</button>
+  </div>
+</div>
+
+<!-- Edit overlay -->
+<div class="ov" id="edit">
+  <div class="ovbar">
+    <button class="close" data-act="closeEdit">✕</button>
+    <div class="grow"><b id="e-title">Nova pjesma</b></div>
+    <button class="navbtn" style="flex:0;padding:9px 16px;background:var(--gold);color:#1a1206;font-weight:700" data-act="saveSong">Spremi</button>
+  </div>
+  <div class="lyrics" style="display:block;padding:18px">
+    <div class="field"><label>Naziv</label><input id="e-name" placeholder="Ime pjesme"></div>
+    <div class="field"><label>Tonalitet</label><input id="e-key" placeholder="npr. A, Em, C#…"></div>
+    <div class="field"><label>Pjeva</label>
+      <div class="singpick" id="e-sing">
+        <button data-s="a" class="a">Josip</button>
+        <button data-s="b" class="b">Pjero</button>
+        <button data-s="both" class="both">Oba</button>
+      </div>
+    </div>
+    <div class="field"><label>U setovima</label><div class="setpick" id="e-sets"></div></div>
+    <div class="field"><label>Tekst</label><textarea id="e-lyrics" placeholder="Zalijepi tekst pjesme…"></textarea></div>
+    <button class="btn danger" data-act="delSong">Obriši pjesmu</button>
+    <div style="height:30px"></div>
+  </div>
+</div>
+
+<!-- Performance overlay -->
+<div class="ov" id="perf">
+  <div class="ovbar">
+    <button class="close" data-act="closePerf">✕</button>
+    <div class="grow"><b id="p-name">—</b><small id="p-set"></small></div>
+    <a class="navbtn" id="p-tekst" target="_blank" rel="noopener" style="flex:0;padding:8px 11px;text-decoration:none;font-size:18px" title="Tekst">📄</a>
+    <span class="keybig" id="p-key">—</span>
+  </div>
+  <div class="lyrics" id="p-lyrics"></div>
+  <div class="ovctrl">
+    <button class="navbtn" data-act="prev" id="p-prev">‹ Prošla</button>
+    <div class="sz"><button data-act="szm">A−</button><button data-act="szp">A+</button></div>
+    <span class="pos" id="p-pos">1/1</span>
+    <button class="navbtn main" data-act="next" id="p-next">Iduća ›</button>
+  </div>
+</div>
+
+<button id="fab" data-act="newSong" style="position:fixed;right:16px;bottom:96px;z-index:45;width:56px;height:56px;border-radius:50%;background:var(--gold);color:#1a1206;font-size:30px;font-weight:700;box-shadow:0 6px 20px rgba(232,176,75,.4);display:flex;align-items:center;justify-content:center">+</button>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ---------- State ---------- */
+const KEY='gigdata_v1';
+/* --- standalone build: localStorage fallback for window.storage --- */
+if(!window.storage){
+  window.storage={
+    get:(k)=>{try{const v=localStorage.getItem(k);return v==null?null:{value:v};}catch(e){return null;}},
+    set:(k,v)=>{try{localStorage.setItem(k,v);}catch(e){}}
+  };
+}
+/* --- baked-in catalog (name/key/singer); lyrics linked, not embedded --- */
+const SEED_SONGS=[{"id":"c0","name":"Dubine (Ulazak) · crkva","key":"f#m","sing":"oba"},{"id":"c1","name":"Ljubav to si ti · crkva","key":"E","sing":"oba"},{"id":"c2","name":"Ispred bijele hostije · crkva","key":"am","sing":"a"},{"id":"c3","name":"Hvalospjev ljubavi · crkva","key":"G+3","sing":"oba"},{"id":"c4","name":"Srce predajem ti · crkva","key":"G+2","sing":"oba"},{"id":"c5","name":"14 PALMI — Daleka obala · pop","key":"A","sing":"oba"},{"id":"c6","name":"92 — Grašo · brza","key":"C","sing":"oba"},{"id":"c7","name":"AKO ME OSTAVIŠ — Mišo · balada","key":"D","sing":"oba"},{"id":"c8","name":"AKO NE ZNAŠ ŠTA JE BILO — Thompson · pop","key":"Am","sing":"oba"},{"id":"c9","name":"AKO ODEM PRIJATELJI — Pejaković · pop","key":"A","sing":"oba"},{"id":"c10","name":"AKO SU TO SAMO BILE LAŽI — Plavi orkestar · pop","key":"A","sing":"a"},{"id":"c11","name":"AKO TE PITAJU — Grašo · balada","key":"C","sing":"oba"},{"id":"c12","name":"BACILA JE SVE NIZ RIJEKU — Indexi/Crvena jabuka · balada","key":"Em","sing":"oba"},{"id":"c13","name":"BEZ TEBE — Oliver · balada","key":"Dm","sing":"oba"},{"id":"c14","name":"BEZOBRAZNO ZELENE — Željko Samardžić · narodno","key":"B","sing":"oba"},{"id":"c15","name":"BILI CVITAK — Jura Stublić · pop","key":"E","sing":"oba"},{"id":"c16","name":"BOEM U DUŠI — Zečić · balada","key":"C","sing":"oba"},{"id":"c17","name":"BOLJE BITI PIJAN NEGO STAR — Plavi orkestar · balada","key":"Am","sing":"oba"},{"id":"c18","name":"BOLJE ŽIVIM NEGO MINISTAR — Grdović · pop","key":"F","sing":"oba"},{"id":"c19","name":"BURA OKRIĆE — Dalmatino · pop","key":"A","sing":"oba"},{"id":"c20","name":"CESARICA — Oliver · balada","key":"C","sing":"oba"},{"id":"c21","name":"CRNA ŽENO NAJLJEPŠA SI ZNAJ — Ivčić · balada","key":"G","sing":"oba"},{"id":"c22","name":"CROATIO, IZ DUŠE TE LJUBIM — Bralić i klapa Intrade · balada","key":"E","sing":"oba"},{"id":"c23","name":"CVIT OD KAMENA — Dalmatino · balada","key":"A","sing":"oba"},{"id":"c24","name":"ČA ĆE MI COPACABANA — Oliver · brza","key":"Dm","sing":"oba"},{"id":"c25","name":"ĆAĆA — Vlado Bašić · slavonsko","key":"Dism","sing":"a"},{"id":"c26","name":"DA JE SREĆE BILO — Bebek · brza","key":"C","sing":"b"},{"id":"c27","name":"DA NIJE LJUBAVI — Crvena jabuka · brza","key":"G","sing":"b"},{"id":"c28","name":"DAJEN TI RIČ — Dalmatino · brza","key":"C","sing":"b"},{"id":"c29","name":"DALMACIJA U MOM OKU — Mišo · balada","key":"D/G","sing":"b"},{"id":"c30","name":"DALMACIJO — Tutti Frutti · brza","key":"C","sing":"b"},{"id":"c31","name":"DALMATINAC — Grdović · balada","key":"A","sing":"a"},{"id":"c32","name":"DAO BI STO AMERIKA — Stavros · pop","key":"A","sing":"a"},{"id":"c33","name":"DRUGI JOJ RASPLIĆE KOSU — Mišo · pop","key":"G","sing":"b"},{"id":"c34","name":"DITELINA S 4 LISTA — Dalmatino · pop","key":"A","sing":"a"},{"id":"c35","name":"DOBRA VEČER PRIJATELJI — Milo Hrnić · pop","key":"G","sing":"a"},{"id":"c36","name":"DRSKA ŽENO PLAVA — Joksimović · brza","key":"Am","sing":"b"},{"id":"c37","name":"DUŠA OD PAPIRA — Jole · brza","key":"H/E","sing":"b"},{"id":"c38","name":"DVA PUT SAN UMRA — Oliver · balada","key":"B→C","sing":"b"},{"id":"c39","name":"DVI SESTRE BLIZANKE — Dalmatino · balada","key":"B (P:D)","sing":"a"},{"id":"c40","name":"DVIJE DUŠE — Gibonni · pop","key":"Em (P:Fism)","sing":"a"},{"id":"c41","name":"DŽULI — Daniel Popović · brza","key":"F","sing":"b"},{"id":"c42","name":"ELLA E — Dino Dvornik i Belan · pop","key":"D","sing":"a"},{"id":"c43","name":"GENI KAMENI — Thompson","key":"D","sing":"b"},{"id":"c44","name":"GORI GORA, GORI BOROVINA — Mate Bulić · brza (odgovore J 3 dole)","key":"F","sing":"b"},{"id":"c45","name":"HERCEGOVKA IZ MOSTARA — Noćni život · narodno","key":"A","sing":"b"},{"id":"c46","name":"NADALINA mix — Oliver · medley","key":"G (D kitice)","sing":"b"},{"id":"c47","name":"INATI SE SLAVONIJO — Kićo Slabinac · slavonsko","key":"G (C početak)","sing":"b"},{"id":"c48","name":"KAD MI PADNE ŠEŠIR NA ČELO — Stjepan Jeršek Štef · slavonsko","key":"E→A","sing":"b"},{"id":"c49","name":"KAD PROCVATU JABUKE — Slavonske lole · slavonsko","key":"G→C","sing":"b"},{"id":"c50","name":"LEPE TI JE ZAGORJE ZELENE · slavonsko","key":"C","sing":"b"},{"id":"c51","name":"JA PO KAFANAMA — Bebek · balada","key":"Em","sing":"b"},{"id":"c52","name":"JEDNOM KAD NOĆ — Opća opasnost · balada","key":"E","sing":"b"},{"id":"c53","name":"JOŠ FALIŠ — Vigor · balada","key":"G","sing":"a"},{"id":"c54","name":"JOŠ I DANAS TEKU SUZE JEDNE ŽENE — Mišo · pop","key":"A","sing":"b"},{"id":"c55","name":"KAD BI SE MOGA RODIT — Hari Rončević · pop (Josip kitica, Pjero refren)","key":"B","sing":"a"},{"id":"c56","name":"KAD ZAMIRIŠU JORGOVANI — Merlin · pop","key":"Gm","sing":"b"},{"id":"c57","name":"KADA JEDNOM OVOM ZAFALIM SE TILU — Hari Rončević · pop","key":"D","sing":"a"},{"id":"c58","name":"KADA UMREN UMOTAN U BILO — Coce · pop","key":"A","sing":"oba"},{"id":"c59","name":"KAO MOJA MATI — Čolić · balada","key":"Am","sing":"oba"},{"id":"c60","name":"KARABAJA — Zabranjeno pušenje · brza","key":"A","sing":"oba"},{"id":"c61","name":"KO NAM BRANI — Grašo · brza","key":"B","sing":"oba"},{"id":"c62","name":"KOME BI ŠUMILO MORE MOJE SINJE — Hrnić · brza","key":"A","sing":"oba"},{"id":"c63","name":"KOKTEL LJUBAVI — Nedeljko Bajić Baja · narodno","key":"Hm","sing":"oba"},{"id":"c64","name":"KRIVO JE MORE — Divlje jagode · balada","key":"G","sing":"oba"},{"id":"c65","name":"KUĆA NA KRAJU SELA — Škoro · slavonsko","key":"A","sing":"oba"},{"id":"c66","name":"KUĆA PUNA NARODA — Čolić · balada","key":"C","sing":"oba"},{"id":"c67","name":"LAKU NOĆ SVIRAČI — Bebek · balada","key":"Cis/D","sing":"oba"},{"id":"c68","name":"LEDENA — Toše · brza","key":"D","sing":"oba"},{"id":"c69","name":"LEPA DO BOLA — Sinan Sakić · narodno","key":"Gism","sing":"oba"},{"id":"c70","name":"LIJEPA LI SI — Thompson · pop","key":"Am/G","sing":"oba"},{"id":"c71","name":"LUTKA — S.A.R.S. · balada","key":"D","sing":"oba"},{"id":"c72","name":"MAGDALENA — Oliver · balada","key":"Fm","sing":"oba"},{"id":"c73","name":"MAJKO STARA — Matko Jelavić · pop","key":"A","sing":"oba"},{"id":"c74","name":"MARICA — Daleka obala · brza","key":"G","sing":"oba"},{"id":"c75","name":"MARINA — Azra","key":"D/Fism","sing":"oba"},{"id":"c76","name":"MATA — Škoro · slavonsko","key":"G","sing":"oba"},{"id":"c77","name":"MI PLEŠEMO — Prljavo kazalište · brza","key":"D","sing":"oba"},{"id":"c78","name":"MIX — razno","key":"G","sing":"oba"},{"id":"c79","name":"MOJ DIDA I JA — Thompson · pop","key":"Dm","sing":"oba"},{"id":"c80","name":"MOJ IVANE — Thompson · pop","key":"H","sing":"oba"},{"id":"c81","name":"MOJA ANE BROJI DANE — Milo Hrnić · brza","key":"F","sing":"oba"},{"id":"c82","name":"MOJA DOMOVINA — Band Aid · balada","key":"G","sing":"oba"},{"id":"c83","name":"MOJA HERCEGOVINA — Mate Bulić · narodno","key":"Am/D","sing":"oba"},{"id":"c84","name":"MOJA JUBE — Dalmatino · balada","key":"A","sing":"oba"},{"id":"c85","name":"MOJA JULIŠKA — Škoro · slavonsko","key":"Hm","sing":"oba"},{"id":"c86","name":"MOJE PRVO PIJANSTVO — Oliver · pop","key":"C","sing":"oba"},{"id":"c87","name":"MOJOJ LIJEPOJ ZEMLJI HRVATSKOJ · pop","key":"Am","sing":"oba"},{"id":"c88","name":"MORE SNOVA — Tedi Spalato · balada","key":"C","sing":"oba"},{"id":"c89","name":"MORSKA VILA — Daleka obala · balada","key":"C","sing":"oba"},{"id":"c90","name":"MOTORI — Divlje jagode · brza","key":"Dm/Em","sing":"oba"},{"id":"c91","name":"MOŽEŠ IMAT MOJE TIJELO — Zabranjeno pušenje · balada","key":"E","sing":"oba"},{"id":"c92","name":"NAĐI NOVU LJUBAV — Saša Matić · balada","key":"Gm","sing":"oba"},{"id":"c93","name":"NAJLIPŠA SI — Ivica Sikirić Ićo · balada","key":"A","sing":"oba"},{"id":"c94","name":"NAPILE SE ULICE — Bijelo dugme · brza","key":"E/A","sing":"oba"},{"id":"c95","name":"NARODNA — Dječaci · brza","key":"C","sing":"oba"},{"id":"c96","name":"NE DIRAJ MOJU LJUBAV — Šufit · balada","key":"G","sing":"oba"},{"id":"c97","name":"NE SPAVAJ MALA MOJA — Bijelo dugme · brza","key":"G","sing":"oba"},{"id":"c98","name":"NE ZOVI MAMA DOKTORA — Prljavo kazalište · brza","key":"A","sing":"oba"},{"id":"c99","name":"NEDOSTAJEŠ MI TI — Oliver · brza","key":"Gm","sing":"oba"},{"id":"c100","name":"NESANICA — Toše Proeski · narodno","key":"G","sing":"oba"},{"id":"c101","name":"NEVISTA — Grašo · brza","key":"H","sing":"oba"},{"id":"c102","name":"NIJE HTJELA — Kemal Monteno · balada","key":"C","sing":"oba"},{"id":"c103","name":"NIJE U ŠOLDIMA SVE — Grdović · balada","key":"C","sing":"oba"},{"id":"c104","name":"NIJE ŽIVOT JEDNA ŽENA — Miroslav Ilić · narodno","key":"H","sing":"oba"},{"id":"c105","name":"NITKO NEMA DVA ŽIVOTA — Zečić · pop","key":"E","sing":"oba"},{"id":"c106","name":"NOĆ JE PREKRASNA — Daleka obala · balada","key":"Em","sing":"oba"},{"id":"c107","name":"NOĆ MI TE DUGUJE — Čolić · balada","key":"Am","sing":"oba"},{"id":"c108","name":"OČI BOJE LAVANDE — Grdović · pop","key":"A/E","sing":"oba"},{"id":"c109","name":"OD MORA DO MORA — Daleka obala · brza","key":"C","sing":"oba"},{"id":"c110","name":"OPET JE JUBIN CILIN TILON — Ićo · pop","key":"G","sing":"oba"},{"id":"c111","name":"OPROSTI MI ŠTO TE VOLIM — Bebek · balada","key":"Dm","sing":"oba"},{"id":"c112","name":"OSTALA SI UVIJEK ISTA — Mišo Kovač · balada","key":"Dm","sing":"oba"},{"id":"c113","name":"OTVORI MI DRAGA — Jole · brza","key":"Cmaj7","sing":"oba"},{"id":"c114","name":"PARIŠKE KAPIJE — Haris Džinović · narodno","key":"Am","sing":"oba"},{"id":"c115","name":"PIŠI MI — Drugi način · balada","key":"A","sing":"oba"},{"id":"c116","name":"PLAVI SAFIR — Bajaga · pop","key":"A","sing":"oba"},{"id":"c117","name":"PODIGLA ME IZ PEPELA — Vuco · narodno","key":"Am","sing":"oba"},{"id":"c118","name":"POLOMIĆU ČAŠE OD KRISTALA — Miroslav Ilić · narodno","key":"Am","sing":"oba"},{"id":"c119","name":"POLJUBI ZEMLJU — Mišo · balada","key":"C","sing":"oba"},{"id":"c120","name":"PRAZNA ČAŠA NA MOM STOLU — Tozovac · narodno","key":"D","sing":"oba"},{"id":"c121","name":"PRIJATELJI — Thompson · pop","key":"Am","sing":"oba"},{"id":"c122","name":"PRVI POLJUBAC — Halid · narodno","key":"Am","sing":"oba"},{"id":"c123","name":"PUKNI PUŠKO — Thompson · pop","key":"Am","sing":"oba"},{"id":"c124","name":"PUSTI PUSTI MODU — Čolić · pop","key":"Am","sing":"oba"},{"id":"c125","name":"PUT KA SREĆI — Bare · pop","key":"G","sing":"oba"},{"id":"c126","name":"RAJSKE KOČIJE — Vuco · balada","key":"G","sing":"oba"},{"id":"c127","name":"REFUŽO — Dalmatino · pop","key":"A","sing":"oba"},{"id":"c128","name":"RIJEKA SNOVA — Belan · pop","key":"Fism","sing":"oba"},{"id":"c129","name":"ROZA — Daleka obala · brza","key":"D","sing":"oba"},{"id":"c130","name":"RUZINAVI BROD — Daleka obala · pop","key":"A/D","sing":"oba"},{"id":"c131","name":"RUŽA HRVATSKA — Prljavo kazalište · pop","key":"F/C","sing":"oba"},{"id":"c132","name":"RUŽICA SI BILA — Bijelo dugme · pop","key":"Am","sing":"oba"},{"id":"c133","name":"SAMO JE LJUBAV TAJNA DVAJU SVJETOVA — Thompson · balada","key":"Fism","sing":"oba"},{"id":"c134","name":"SANJA — Alisa/Vuco · brza","key":"Gm","sing":"oba"},{"id":"c135","name":"SINOĆ SAM POLA KAFANE POPIO — Bebek · brza","key":"Am","sing":"oba"},{"id":"c136","name":"SRETAN TI ROĐENDAN — Fantomi · pop","key":"G","sing":"oba"},{"id":"c137","name":"STARA ZVONA — Jelenković · brza","key":"C","sing":"oba"},{"id":"c138","name":"STARI LAV — Samardžić · pop","key":"G","sing":"oba"},{"id":"c139","name":"STOJIN NA KANTUNU — Đavoli · pop","key":"C","sing":"oba"},{"id":"c140","name":"SUZA ZA ZAGORSKE BREGE — Vice Vukov · balada","key":"C/G","sing":"oba"},{"id":"c141","name":"SVE JE LAKO KAD SI MLAD — Prljavo kazalište · pop","key":"G","sing":"oba"},{"id":"c142","name":"SVIRAJTE NOĆAS ZA MOJU DUŠU — Oliver · pop","key":"C","sing":"oba"},{"id":"c143","name":"TAMAN JE — Halid · narodno","key":"F","sing":"oba"},{"id":"c144","name":"TAMO GDJE SAM ROĐEN — Ivčić · pop","key":"C","sing":"oba"},{"id":"c145","name":"TEBI — Miroslav Ilić · narodno","key":"Fm","sing":"oba"},{"id":"c146","name":"TEŠKE BOJE — Bare & Majke · pop","key":"Gism","sing":"oba"},{"id":"c147","name":"TI SI ME ČEKALA — Tozovac · narodno","key":"E","sing":"oba"},{"id":"c148","name":"TI SI MI U KRVI — Čolić · balada","key":"Hm","sing":"oba"},{"id":"c149","name":"TI SI MI U MISLIMA — Dino Dvornik · brza","key":"Am","sing":"oba"},{"id":"c150","name":"TIHO, TIHO TEČE NERETVA — Mate Bulić · narodno","key":"Em","sing":"oba"},{"id":"c151","name":"TIŠINA — Bajaga · balada","key":"Am","sing":"oba"},{"id":"c152","name":"TRAŽENA SI ROBA U GRADU — Vuco · pop","key":"E/Gism","sing":"oba"},{"id":"c153","name":"U MENI JESEN JE — Halid · pop","key":"Am","sing":"oba"},{"id":"c154","name":"UVIK ISTI — Grašo · balada","key":"Gism/Am","sing":"oba"},{"id":"c155","name":"UZALUD VAM TRUD SVIRAČI — Prljavo kazalište · balada","key":"Hm","sing":"oba"},{"id":"c156","name":"VEČERAS JE NAŠA FEŠTA — Ivčić · brza","key":"G","sing":"oba"},{"id":"c157","name":"VISINE — Matija Cvek · balada","key":"Fism","sing":"oba"},{"id":"c158","name":"VJEČNI SOKOL — Zdenko Nikšić · narodno","key":"C","sing":"oba"},{"id":"c159","name":"VOLIM I POSTOJIM — Grašo · pop","key":"H","sing":"oba"},{"id":"c160","name":"VOLIM PITI I LJUBITI — Vuco · narodno","key":"G","sing":"oba"},{"id":"c161","name":"ZA LJILJANU — Toma Zdravković · narodno","key":"Em","sing":"oba"},{"id":"c162","name":"ZA LJUBAV TREBA IMAT DUŠU — Atomsko sklonište · pop","key":"A","sing":"oba"},{"id":"c163","name":"ZABORAVI ESPANJU — Zlatko Pejaković · brza","key":"C","sing":"oba"},{"id":"c164","name":"ZAŠTO PRAVIŠ SLONA OD MENE — Dino Dvornik · brza","key":"Hm","sing":"oba"},{"id":"c165","name":"ZBOG JEDNE DIVNE CRNE ŽENE — Kićo Slabinac · balada","key":"A","sing":"oba"},{"id":"c166","name":"ZBOG JEDNE LJUBAVI — Torcida · pop","key":"G/A","sing":"oba"},{"id":"c167","name":"ZORA BILA — Bralić i Intrade · balada","key":"Cism","sing":"oba"},{"id":"c168","name":"ZOVEM PRIJATELJE MOJE — Giuliano · balada","key":"Gm","sing":"oba"},{"id":"c169","name":"ŽALE GODINE — Esad Merulić · narodno","key":"Gism","sing":"oba"},{"id":"c170","name":"AKO POLUDIM — Magazin · pop","key":"H/Cism","sing":"oba"},{"id":"c171","name":"ALI PAMTIM JOŠ — Hanka Paldum · narodno","key":"Dis","sing":"oba"},{"id":"c172","name":"ASPIRIN — Seka Aleksić · narodno","key":"Am","sing":"oba"},{"id":"c173","name":"BIŽUTERIJA — Rozga · pop","key":"Cism","sing":"oba"},{"id":"c174","name":"BLAGO MENI — Ana Bekuta · narodno","key":"H","sing":"oba"},{"id":"c175","name":"CRNO I ZLATNO — Seka Aleksić · narodno","key":"Dism","sing":"oba"},{"id":"c176","name":"CRVENI LAK — Sanja Đorđević · narodno","key":"Cm","sing":"oba"},{"id":"c177","name":"DA JE SLAĐE ZASPATI — Danijela · pop","key":"A/B","sing":"oba"},{"id":"c178","name":"DA TI NISAM BILA DOVOLJNA — E.T. · brza","key":"Em","sing":"oba"},{"id":"c179","name":"DA ZNAŠ — Vesna Pisarović · balada","key":"D","sing":"oba"},{"id":"c180","name":"DAJEM TI SRCE — Doris · balada","key":"Dm","sing":"oba"},{"id":"c181","name":"DANI I GODINE — Nina Badrić · balada","key":"A","sing":"oba"},{"id":"c182","name":"DANI SU BEZ BROJA — Magazin · pop","key":"Dm","sing":"oba"},{"id":"c183","name":"GUTLJAJ VINA — Magazin · pop","key":"D","sing":"oba"},{"id":"c184","name":"HAJDE DA LUDUJEMO — Tajči · brza","key":"Dis","sing":"oba"},{"id":"c185","name":"IZA PONOĆI — Ella · brza","key":"Dm/F","sing":"oba"},{"id":"c186","name":"JUTRO DONOSI KRAJ — Vesna Pisarović · brza","key":"F","sing":"oba"},{"id":"c187","name":"JUTRO JE — Nada Topčagić · narodno","key":"Dm","sing":"oba"},{"id":"c188","name":"KAZNI ME KAZNI — Vesna Zmijanac · narodno","key":"E","sing":"oba"},{"id":"c189","name":"KOKOLO — Magazin · brza","key":"G/Gis","sing":"oba"},{"id":"c190","name":"LINĐO — Gracia · brza","key":"D","sing":"oba"},{"id":"c191","name":"LJUBE SE DOBRI LOŠI ZLI — Magazin · pop","key":"E","sing":"oba"},{"id":"c192","name":"MALO MI ZA SRIĆU TRIBA — Doris Dragović · balada","key":"Cis","sing":"oba"},{"id":"c193","name":"MIMO ZAKONA — Minea · brza","key":"C","sing":"oba"},{"id":"c194","name":"MINUT SRCA TVOG — Magazin · pop","key":"Cis/D","sing":"oba"},{"id":"c195","name":"MOJA POSLJEDNJA I PRVA LJUBAVI — Tereza/Kampanel · balada","key":"G","sing":"oba"},{"id":"c196","name":"MOJE ZLATO — Milica Todorović · narodno","key":"Em","sing":"oba"},{"id":"c197","name":"NE TIČE ME SE — Magazin · pop","key":"Dism","sing":"oba"},{"id":"c198","name":"NIKOTIN — Nataša Bekvalac · narodno","key":"Dism","sing":"oba"},{"id":"c199","name":"OKO MOJE SANJIVO — Magazin · brza","key":"Hm","sing":"oba"},{"id":"c200","name":"OPROSTI MALA — Rozga · balada","key":"D","sing":"oba"},{"id":"c201","name":"PETAK — Doris · brza","key":"Cm","sing":"oba"},{"id":"c202","name":"PRAZAN STAN — E.T. · brza","key":"D","sing":"oba"},{"id":"c203","name":"PRIJATELJICE — Severina · pop","key":"G","sing":"oba"},{"id":"c204","name":"PROVERENO — Milica Pavlović · narodno","key":"Fm","sing":"oba"},{"id":"c205","name":"RANO — Minea · pop","key":"D","sing":"oba"},{"id":"c206","name":"RANO, RANIJE — Magazin · pop","key":"D","sing":"oba"},{"id":"c207","name":"RASTE TRAVA ZELENA + DJEVOJKA SA SELA — Severina · brza","key":"D","sing":"oba"},{"id":"c208","name":"SEDAM MORA, SEDAM GORA — Doris · brza","key":"C","sing":"oba"},{"id":"c209","name":"SHALLOW — Lady Gaga & Bradley Cooper · balada","key":"G","sing":"oba"},{"id":"c210","name":"SKITNICA — Jasna Zlokić · pop","key":"C/D","sing":"oba"},{"id":"c211","name":"SRDELA — Doris Dragović · brza","key":"D","sing":"oba"},{"id":"c212","name":"SVE BI SEKE LJUBILE MORNARE — Magazin · brza","key":"D","sing":"oba"},{"id":"c213","name":"ŠAKOM O STOL — Doris · pop","key":"D","sing":"oba"},{"id":"c214","name":"ŠTA ĆE MI ŽIVOT — Silvana Armenulić · narodno","key":"H/Em","sing":"oba"},{"id":"c215","name":"ŠUMICA — Ivana Banfić · brza","key":"C","sing":"oba"},{"id":"c216","name":"TAKVI KAO TI — Nina Badrić · brza","key":"Cism","sing":"oba"},{"id":"c217","name":"TEK JE 12 SATI — E.T. · brza","key":"Fm","sing":"oba"},{"id":"c218","name":"TI SI ŽELJA MOG ŽIVOTA — Magazin · balada","key":"C/Cis","sing":"oba"},{"id":"c219","name":"TRI ČAŠE — Milica Todorović · narodno","key":"Cm","sing":"oba"},{"id":"c220","name":"TVOJA PRVA DJEVOJKA — Severina · pop","key":"Dm","sing":"oba"},{"id":"c221","name":"ZAR JE VOLJETI GRIJEH — Kondža · balada","key":"F","sing":"oba"},{"id":"c222","name":"ŽELJO MOJA — Doris · balada","key":"D","sing":"oba"},{"id":"c223","name":"BAKLJE IVANJSKE — Doris i Mladen Bodalec · balada","key":"C","sing":"oba"},{"id":"c224","name":"GODINAMA — Merlin i Ivana Banfić · pop","key":"Fism","sing":"oba"},{"id":"c225","name":"IMA LI NADE ZA NAS — Zečić i Anđela · balada","key":"Am","sing":"oba"},{"id":"c226","name":"JA SAM TI JEDINI DRUG — Jasna Zlokić · balada","key":"Fis/G","sing":"oba"},{"id":"c227","name":"LUTKA ZA BAL — Parni valjak · pop","key":"A","sing":"oba"},{"id":"c228","name":"LJUBAV MOG ŽIVOTA — Coce i Nižetić · pop","key":"C/G","sing":"oba"},{"id":"c229","name":"MORSKI VUK — Tony & Oliver · brza","key":"H","sing":"oba"},{"id":"c230","name":"OVAKO NE MOGU DALJE — Kemal Monteno i Danijela · balada","key":"Dm","sing":"oba"},{"id":"c231","name":"PONOĆ — Toma · narodno","key":"Em","sing":"oba"},{"id":"c232","name":"SLAVIJA — Dzej & Mina · narodno","key":"Gm","sing":"oba"},{"id":"c233","name":"STRANAC U NOĆI — Massimo & Nina Badrić · pop","key":"H","sing":"oba"},{"id":"c234","name":"ŠTO JE TO OD MENE OSTALO — Grašo & Doris · pop","key":"A","sing":"oba"},{"id":"c235","name":"ŠTO UČINILA SI TI — Oliver · brza","key":"D","sing":"oba"},{"id":"c236","name":"U LJUBAV VJERE NEMAM — Oliver i Gibonni · brza","key":"B","sing":"oba"},{"id":"c237","name":"VOLIM OSMIJEH TVOJ — Toše i Antonija Šola · brza","key":"C/D","sing":"oba"},{"id":"c238","name":"OLIVERA — Balašević · balada","key":"A/D","sing":"oba"},{"id":"c239","name":"ŠTO TO BJEŠE LJUBAV — Oliver · balada","key":"Cis","sing":"oba"},{"id":"c240","name":"AFRIKA — Dino Dvornik · brza","key":"Am","sing":"oba"}];
+function lyricsLink(s){
+  if(s&&s.src) return s.src;
+  const q=((s&&s.name)||'').split('·')[0].replace(/—/g,' ').replace(/\s+/g,' ').trim()+' tekst';
+  return 'https://www.google.com/search?q='+encodeURIComponent(q);
+}
+let S={songs:[],sets:[],settings:{a:'Josip',b:'Pjero',avg:3.5,lsz:22}};
+let filter='all', query='', curSong=null, perf={ids:[],i:0,set:''};
+
+const DEF_SETS=[
+ {id:'s_crkva',time:'17:00',name:'Crkva — Sv. Marko',note:'Intro za „Dubine” · 4 pjesme · pičimo nakon mise',type:'songs',target:4,songIds:[]},
+ {id:'s_dolaz',time:'19:00',name:'Dolazak — La Tache',note:'Najava: „Večeras je naša fešta” · ~10 pjesama',type:'songs',target:10,songIds:[]},
+ {id:'s_juha', time:'20:00',name:'Juha',note:'Nakon sviramo ~20 min',type:'min',target:20,songIds:[]},
+ {id:'s_pred', time:'20:45',name:'Toplo predjelo',note:'Nakon sviramo 45 min',type:'min',target:45,songIds:[]},
+ {id:'s_glav', time:'22:00',name:'Glavno jelo',note:'Sviramo 1h',type:'min',target:60,songIds:[]},
+ {id:'s_torta',time:'23:30',name:'Torta',note:'Nakon torte 5–6 pjesama · onda bluetooth, gotovi',type:'songs',target:6,songIds:[]},
+];
+
+async function load(){
+  try{
+    const r=await window.storage.get(KEY);
+    if(r&&r.value){ const d=JSON.parse(r.value); S=Object.assign(S,d); S.settings=Object.assign({a:'Josip',b:'Pjero',avg:3.5,lsz:22},d.settings||{}); }
+  }catch(e){ /* first run */ }
+  let seeded=false;
+  if(!S.songs||!S.songs.length){ S.songs=JSON.parse(JSON.stringify(SEED_SONGS)); seeded=true; }
+  if(!S.sets||!S.sets.length){ S.sets=JSON.parse(JSON.stringify(DEF_SETS)); seeded=true; }
+  if(seeded) save();
+  applySettings(); renderAll();
+}
+let saveT;
+function save(){ clearTimeout(saveT); saveT=setTimeout(async()=>{
+  try{ await window.storage.set(KEY, JSON.stringify(S)); }catch(e){ console.error(e); }
+},250); }
+
+function applySettings(){
+  document.getElementById('fa').textContent=S.settings.a;
+  document.getElementById('fb').textContent=S.settings.b;
+  document.querySelector('#e-sing [data-s=a]').textContent=S.settings.a;
+  document.querySelector('#e-sing [data-s=b]').textContent=S.settings.b;
+  document.documentElement.style.setProperty('--lsz',(S.settings.lsz||22)+'px');
+}
+
+/* ---------- Helpers ---------- */
+const uid=()=>'x'+Math.random().toString(36).slice(2,9);
+const esc=s=>(s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const norm=s=>(s||'').toLowerCase().replace(/[^a-z0-9čćžšđ]/gi,'');
+function singLabel(s){return s==='a'?S.settings.a:s==='b'?S.settings.b:'Oba';}
+function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),1600);}
+function songSets(id){return S.sets.filter(st=>st.songIds.includes(id));}
+
+/* ---------- Render: songs ---------- */
+function renderSongs(){
+  const wrap=document.getElementById('view-songs');
+  let list=S.songs.slice();
+  const q=norm(query);
+  if(q) list=list.filter(s=>norm(s.name).includes(q)||norm(s.lyrics).includes(q));
+  if(filter==='a'||filter==='b'||filter==='both') list=list.filter(s=>s.sing===filter);
+  if(filter==='noset') list=list.filter(s=>!songSets(s.id).length);
+  list.sort((a,b)=>a.name.localeCompare(b.name,'hr'));
+  document.getElementById('hdrcount').textContent=S.songs.length+' pjesama';
+  if(!S.songs.length){ wrap.innerHTML='<div class="empty">Još nema pjesama.<br>Idi na <b>Unos</b>.</div>'; return; }
+  if(!list.length){ wrap.innerHTML='<div class="empty">Nema rezultata za „'+esc(query)+'”.</div>'; return; }
+  wrap.innerHTML='<div class="count">'+list.length+(list.length===1?' pjesma':' pjesama')+'</div>'+
+    list.map(s=>{
+      const sets=songSets(s.id);
+      return `<div class="row" data-song="${s.id}">
+        <div class="bar ${s.sing}"></div>
+        <div class="nm"><b>${esc(s.name)}</b><span>${esc(singLabel(s.sing))}${sets.length?' · '+sets.map(x=>x.time).join(', '):''}</span></div>
+        <div class="key ${s.sing}">${esc(s.key||'–')}</div>
+        ${sets.length?'<div class="setdots">'+sets.map(()=>'<i></i>').join('')+'</div>':''}
+      </div>`;
+    }).join('');
+}
+
+/* ---------- Render: sets ---------- */
+function renderSets(){
+  const wrap=document.getElementById('view-sets');
+  const placed=new Set(); S.sets.forEach(st=>st.songIds.forEach(i=>placed.add(i)));
+  let html=`<div class="infocard"><b>14:00 · La Tache</b><p>Postavljanje opreme · tonska proba</p></div>`;
+  html+=S.sets.map(st=>{
+    const songs=st.songIds.map(id=>S.songs.find(s=>s.id===id)).filter(Boolean);
+    let prog,ok;
+    if(st.type==='songs'){ prog=songs.length+' / '+st.target; ok=songs.length>=st.target; }
+    else{ const m=Math.round(songs.length*S.settings.avg); prog='~'+m+' / '+st.target+' min'; ok=m>=st.target; }
+    return `<div class="setcard">
+      <div class="sethead">
+        <div class="time">${st.time}</div>
+        <div class="t"><b>${esc(st.name)}</b><small>${esc(st.note)}</small></div>
+        <div class="prog ${ok?'ok':''}">${prog}</div>
+      </div>
+      <div class="setsongs">
+        ${songs.length?songs.map((s,i)=>`<div class="ss">
+          <div class="nb">${i+1}</div>
+          <div class="info" data-song="${s.id}"><b>${esc(s.name)}</b></div>
+          <div class="mini ${s.sing}">${esc(s.key||'–')}</div>
+          <button class="ssbtn" data-up="${st.id}|${s.id}">▲</button>
+          <button class="ssbtn" data-down="${st.id}|${s.id}">▼</button>
+          <button class="ssbtn" data-rem="${st.id}|${s.id}">✕</button>
+        </div>`).join(''):'<div style="color:var(--mut2);font-size:13px;padding:4px 4px 10px">Nema pjesama. Otvori pjesmu pa je dodaj u set.</div>'}
+        ${songs.length?`<button class="playset" data-play="${st.id}">▶ Sviraj set (${songs.length})</button>`:''}
+      </div>
+    </div>`;
+  }).join('');
+  wrap.innerHTML=html;
+}
+
+/* ---------- Render: add/import ---------- */
+function renderAdd(){
+  document.getElementById('view-add').innerHTML=`
+    <div class="sec">Brzi unos pjesama</div>
+    <p class="hint">Jedna pjesma po retku. Odvoji polja zarezom, tabom ili <code>|</code>:<br>
+      <code>Naziv | Tonalitet | tko pjeva</code><br>
+      Za „tko pjeva” upiši <b>${esc(S.settings.a)}</b>, <b>${esc(S.settings.b)}</b> ili <b>oba</b> (može i j / p / b). Postojeće pjesme istog naziva se ažuriraju.</p>
+    <div class="field"><textarea id="bulk" placeholder="Mediteranska, A, Josip\nDalmacija, D, Pjero\nMarina, G, oba"></textarea></div>
+    <button class="btn primary" data-act="importSongs">Dodaj pjesme</button>
+
+    <div class="sec">Brzi unos tekstova</div>
+    <p class="hint">Zalijepi sve tekstove odjednom. Razdvoji pjesme linijom <code>---</code> ili headerom <code>## Naziv</code>. Prva linija bloka = naziv (spaja se s postojećom pjesmom).</p>
+    <div class="field"><textarea id="bulkL" placeholder="## Mediteranska\n(tekst…)\n\n---\nDalmacija\n(tekst…)"></textarea></div>
+    <button class="btn primary" data-act="importLyrics">Dodaj tekstove</button>
+
+    <div class="sec">Pjevači</div>
+    <div class="two">
+      <div class="field"><label>Izvođač A</label><input id="set-a" value="${esc(S.settings.a)}"></div>
+      <div class="field"><label>Izvođač B</label><input id="set-b" value="${esc(S.settings.b)}"></div>
+    </div>
+    <div class="field"><label>Prosj. trajanje pjesme (min) — za procjenu setova</label><input id="set-avg" type="number" step="0.5" value="${S.settings.avg}"></div>
+    <button class="btn ghost" data-act="saveSettings">Spremi postavke</button>
+
+    <div class="sec">Sigurnosna kopija</div>
+    <p class="hint">Sve se sprema u pregledniku. Za svaki slučaj kopiraj backup prije gaže.</p>
+    <button class="btn ghost" data-act="exportData">Kopiraj backup (JSON)</button>
+    <button class="btn ghost" data-act="importData">Vrati iz backupa</button>
+    <div style="height:30px"></div>`;
+}
+
+function renderAll(){renderSongs();renderSets();renderAdd();}
+
+/* ---------- Import logic ---------- */
+function mapSinger(raw){
+  raw=(raw||'').trim().toLowerCase();
+  if(!raw) return 'a';
+  if(/oba|both|duet|zajedno/.test(raw)) return 'both';
+  if(raw===norm(S.settings.b)||raw==='b'||raw==='p'||raw.startsWith(S.settings.b.toLowerCase().slice(0,3))) return 'b';
+  if(raw===norm(S.settings.a)||raw==='a'||raw==='j'||raw.startsWith(S.settings.a.toLowerCase().slice(0,3))) return 'a';
+  return 'a';
+}
+function importSongs(){
+  const txt=document.getElementById('bulk').value;
+  let lines=txt.split('\n').map(l=>l.trim()).filter(Boolean);
+  if(lines[0]&&/naziv|name|pjesma/i.test(lines[0])&&/(ton|key|pjeva|sing)/i.test(lines[0])) lines.shift();
+  let added=0,upd=0;
+  lines.forEach(l=>{
+    let parts;
+    if(l.includes('\t')) parts=l.split('\t');
+    else if(l.includes('|')) parts=l.split('|');
+    else parts=l.split(',');
+    parts=parts.map(p=>p.trim());
+    const name=parts[0]; if(!name) return;
+    const key=parts[1]||''; const sing=mapSinger(parts[2]);
+    const ex=S.songs.find(s=>norm(s.name)===norm(name));
+    if(ex){ if(key)ex.key=key; ex.sing=sing; upd++; }
+    else{ S.songs.push({id:uid(),name,key,sing,lyrics:''}); added++; }
+  });
+  save(); renderAll();
+  document.getElementById('bulk').value='';
+  toast(added+' dodano · '+upd+' ažurirano');
+}
+function importLyrics(){
+  const txt=document.getElementById('bulkL').value; if(!txt.trim()){toast('Prazno');return;}
+  let blocks=[];
+  if(/^##\s/m.test(txt)){
+    txt.split(/^##\s+/m).forEach(b=>{b=b.trim();if(!b)return;const nl=b.indexOf('\n');blocks.push({title:b.slice(0,nl<0?b.length:nl).trim(),body:nl<0?'':b.slice(nl+1).trim()});});
+  }else{
+    txt.split(/^\s*-{3,}\s*$/m).forEach(b=>{b=b.trim();if(!b)return;const nl=b.indexOf('\n');blocks.push({title:b.slice(0,nl<0?b.length:nl).trim(),body:nl<0?'':b.slice(nl+1).trim()});});
+  }
+  let matched=0,created=0;
+  blocks.forEach(bl=>{
+    if(!bl.title)return;
+    const ex=S.songs.find(s=>norm(s.name)===norm(bl.title));
+    if(ex){ex.lyrics=bl.body;matched++;}
+    else{S.songs.push({id:uid(),name:bl.title,key:'',sing:'a',lyrics:bl.body});created++;}
+  });
+  save(); renderAll();
+  document.getElementById('bulkL').value='';
+  toast(matched+' spojeno · '+created+' novih');
+}
+
+/* ---------- Detail / edit ---------- */
+function openDetail(id){
+  curSong=S.songs.find(s=>s.id===id); if(!curSong)return;
+  document.getElementById('d-name').textContent=curSong.name;
+  const sets=songSets(id);
+  document.getElementById('d-sub').textContent=singLabel(curSong.sing)+' · '+(curSong.key||'bez tonaliteta')+(sets.length?' · '+sets.map(x=>x.name.split('—')[0].trim()).join(', '):'');
+  const ly=document.getElementById('d-lyrics');
+  if(curSong.lyrics){ly.textContent=curSong.lyrics;ly.classList.remove('empty2');}
+  else{ly.textContent='Nema upisanog teksta. Otvori „📄 Tekst ↗” za vanjski izvor, ili „Uredi” pa zalijepi svoj tekst.';ly.classList.add('empty2');}
+  document.getElementById('d-tekst').href=lyricsLink(curSong);
+  document.getElementById('detail').classList.add('show');
+}
+function openEdit(id){
+  curSong = id? S.songs.find(s=>s.id===id) : {id:uid(),name:'',key:'',sing:'a',lyrics:'',_new:true};
+  document.getElementById('e-title').textContent=curSong._new?'Nova pjesma':'Uredi';
+  document.getElementById('e-name').value=curSong.name;
+  document.getElementById('e-key').value=curSong.key;
+  document.getElementById('e-lyrics').value=curSong.lyrics;
+  document.querySelectorAll('#e-sing button').forEach(b=>b.classList.toggle('on',b.dataset.s===curSong.sing));
+  const sp=document.getElementById('e-sets');
+  sp.innerHTML=S.sets.map(st=>`<button data-toset="${st.id}" class="${st.songIds.includes(curSong.id)?'on':''}">${st.time} ${esc(st.name.split('—')[0].trim())}</button>`).join('');
+  document.querySelector('[data-act=delSong]').style.display=curSong._new?'none':'block';
+  document.getElementById('edit').classList.add('show');
+}
+function saveSong(){
+  curSong.name=document.getElementById('e-name').value.trim();
+  curSong.key=document.getElementById('e-key').value.trim();
+  curSong.lyrics=document.getElementById('e-lyrics').value;
+  if(!curSong.name){toast('Upiši naziv');return;}
+  if(curSong._new){delete curSong._new;S.songs.push(curSong);}
+  save();renderAll();
+  document.getElementById('edit').classList.remove('show');
+  toast('Spremljeno');
+}
+function delSong(){
+  if(!confirm('Obrisati „'+curSong.name+'”?'))return;
+  S.songs=S.songs.filter(s=>s.id!==curSong.id);
+  S.sets.forEach(st=>st.songIds=st.songIds.filter(i=>i!==curSong.id));
+  save();renderAll();
+  document.getElementById('edit').classList.remove('show');
+  document.getElementById('detail').classList.remove('show');
+  toast('Obrisano');
+}
+
+/* ---------- Performance ---------- */
+let wakeLock=null;
+async function reqWake(){try{if('wakeLock'in navigator)wakeLock=await navigator.wakeLock.request('screen');}catch(e){}}
+function relWake(){try{wakeLock&&wakeLock.release();}catch(e){}wakeLock=null;}
+function startPerf(ids,setName,i=0){
+  if(!ids.length){toast('Set je prazan');return;}
+  perf={ids,i,set:setName}; reqWake(); showPerf();
+  document.getElementById('perf').classList.add('show');
+}
+function showPerf(){
+  const s=S.songs.find(x=>x.id===perf.ids[perf.i]); if(!s)return;
+  document.getElementById('p-name').textContent=s.name;
+  document.getElementById('p-set').textContent=perf.set+' · '+singLabel(s.sing);
+  const k=document.getElementById('p-key'); k.textContent=s.key||'–'; k.className='keybig '+s.sing;
+  const ly=document.getElementById('p-lyrics');
+  if(s.lyrics){ly.textContent=s.lyrics;ly.classList.remove('empty2');}else{ly.textContent='(nema teksta)';ly.classList.add('empty2');}
+  document.getElementById('p-tekst').href=lyricsLink(s);
+  ly.scrollTop=0;
+  document.getElementById('p-pos').textContent=(perf.i+1)+'/'+perf.ids.length;
+  document.getElementById('p-prev').disabled=perf.i===0;
+  document.getElementById('p-next').disabled=perf.i===perf.ids.length-1;
+}
+function step(d){const n=perf.i+d;if(n<0||n>=perf.ids.length)return;perf.i=n;showPerf();}
+
+/* ---------- Set ops ---------- */
+function moveInSet(setId,songId,dir){
+  const st=S.sets.find(x=>x.id===setId);const i=st.songIds.indexOf(songId);const j=i+dir;
+  if(j<0||j>=st.songIds.length)return;
+  [st.songIds[i],st.songIds[j]]=[st.songIds[j],st.songIds[i]];
+  save();renderSets();
+}
+function toggleSet(setId){
+  const st=S.sets.find(x=>x.id===setId);const i=st.songIds.indexOf(curSong.id);
+  if(i>=0)st.songIds.splice(i,1);else st.songIds.push(curSong.id);
+  save();
+  document.querySelectorAll('#e-sets [data-toset]').forEach(b=>b.classList.toggle('on',S.sets.find(x=>x.id===b.dataset.toset).songIds.includes(curSong.id)));
+}
+
+/* ---------- Font size ---------- */
+function sz(d){S.settings.lsz=Math.max(15,Math.min(40,(S.settings.lsz||22)+d));document.documentElement.style.setProperty('--lsz',S.settings.lsz+'px');save();}
+
+/* ---------- Tabs ---------- */
+function tab(name){
+  ['songs','sets','add'].forEach(t=>{
+    document.getElementById('view-'+t).classList.toggle('hide',t!==name);
+    document.getElementById('t-'+t).classList.toggle('on',t===name);
+  });
+  document.getElementById('searchWrap').parentElement.querySelectorAll('.search,.filters').forEach(e=>e.style.display=name==='songs'?'':'none');
+  document.getElementById('fab').style.display=name==='songs'?'flex':'none';
+}
+
+/* ---------- Events ---------- */
+document.getElementById('q').addEventListener('input',e=>{query=e.target.value;renderSongs();});
+document.getElementById('filters').addEventListener('click',e=>{const b=e.target.closest('.chip');if(!b)return;filter=b.dataset.f;document.querySelectorAll('.chip').forEach(c=>c.classList.toggle('on',c===b));renderSongs();});
+document.querySelector('nav').addEventListener('click',e=>{const b=e.target.closest('[data-tab]');if(b)tab(b.dataset.tab);});
+
+document.body.addEventListener('click',e=>{
+  const row=e.target.closest('[data-song]'); if(row){openDetail(row.dataset.song);return;}
+  const a=e.target.closest('[data-act]'); if(a){act(a.dataset.act);return;}
+  const up=e.target.closest('[data-up]'); if(up){const[s,g]=up.dataset.up.split('|');moveInSet(s,g,-1);return;}
+  const dn=e.target.closest('[data-down]'); if(dn){const[s,g]=dn.dataset.down.split('|');moveInSet(s,g,1);return;}
+  const rm=e.target.closest('[data-rem]'); if(rm){const[s,g]=rm.dataset.rem.split('|');const st=S.sets.find(x=>x.id===s);st.songIds=st.songIds.filter(i=>i!==g);save();renderSets();return;}
+  const pl=e.target.closest('[data-play]'); if(pl){const st=S.sets.find(x=>x.id===pl.dataset.play);startPerf(st.songIds.slice(),st.name.split('—')[0].trim());return;}
+  const ts=e.target.closest('[data-toset]'); if(ts){toggleSet(ts.dataset.toset);return;}
+  const sg=e.target.closest('#e-sing [data-s]'); if(sg){curSong.sing=sg.dataset.s;document.querySelectorAll('#e-sing button').forEach(b=>b.classList.toggle('on',b===sg));return;}
+});
+
+function act(a){
+  switch(a){
+    case 'closeDetail':document.getElementById('detail').classList.remove('show');break;
+    case 'newSong':openEdit(null);break;
+    case 'closeEdit':document.getElementById('edit').classList.remove('show');break;
+    case 'closePerf':document.getElementById('perf').classList.remove('show');relWake();break;
+    case 'editSong':document.getElementById('detail').classList.remove('show');openEdit(curSong.id);break;
+    case 'saveSong':saveSong();break;
+    case 'delSong':delSong();break;
+    case 'perfFromDetail':document.getElementById('detail').classList.remove('show');startPerf([curSong.id],'Pjesma');break;
+    case 'prev':step(-1);break;
+    case 'next':step(1);break;
+    case 'szp':sz(2);break;
+    case 'szm':sz(-2);break;
+    case 'importSongs':importSongs();break;
+    case 'importLyrics':importLyrics();break;
+    case 'saveSettings':
+      S.settings.a=document.getElementById('set-a').value.trim()||'Josip';
+      S.settings.b=document.getElementById('set-b').value.trim()||'Pjero';
+      S.settings.avg=parseFloat(document.getElementById('set-avg').value)||3.5;
+      applySettings();save();renderAll();toast('Postavke spremljene');break;
+    case 'exportData':
+      navigator.clipboard.writeText(JSON.stringify(S)).then(()=>toast('Backup kopiran u clipboard')).catch(()=>{prompt('Kopiraj ovo:',JSON.stringify(S));});break;
+    case 'importData':
+      const t=prompt('Zalijepi backup JSON:');if(t){try{S=Object.assign(S,JSON.parse(t));applySettings();save();renderAll();toast('Vraćeno');}catch(e){toast('Neispravan JSON');}}break;
+  }
+}
+
+/* New song button via long handling: add a floating action on songs view */
+document.getElementById('t-songs').addEventListener('dblclick',()=>openEdit(null));
+
+/* Swipe in performance */
+let tx=0;
+document.getElementById('p-lyrics').addEventListener('touchstart',e=>tx=e.touches[0].clientX,{passive:true});
+document.getElementById('p-lyrics').addEventListener('touchend',e=>{const dx=e.changedTouches[0].clientX-tx;if(Math.abs(dx)>70)step(dx<0?1:-1);},{passive:true});
+
+load();
+</script>
