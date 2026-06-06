@@ -180,7 +180,8 @@
   .row.played .nm b{text-decoration:line-through}
   .ss.played{opacity:.45}
   .navbtn.on{background:var(--gold-d);color:var(--gold)}
-  .recs{padding:8px 14px 12px;border-top:1px solid var(--line);max-height:55vh;overflow-y:auto;-webkit-overflow-scrolling:touch}
+  .ovscroll{flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch}
+  .recs{padding:10px 14px 28px;border-top:1px solid var(--line)}
   .recs-h{font-size:11.5px;color:var(--mut);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin:6px 2px 9px}
   .rec{display:flex;justify-content:space-between;align-items:center;gap:8px;width:100%;text-align:left;padding:10px 12px;background:var(--panel);border:1px solid var(--line);border-radius:10px;margin-bottom:6px;font-size:14px;font-weight:600;color:var(--txt)}
   .rec.played{opacity:.5;text-decoration:line-through}
@@ -233,8 +234,10 @@
     <div class="grow"><b id="d-name">—</b><small id="d-sub"></small></div>
     <button class="navbtn" style="flex:0;padding:9px 13px;background:var(--panel)" data-act="editSong">Uredi</button>
   </div>
-  <div class="lyrics" id="d-lyrics"></div>
-  <div class="recs" id="d-recs"></div>
+  <div class="ovscroll" id="d-scroll">
+    <div class="lyrics" id="d-lyrics"></div>
+    <div class="recs" id="d-recs"></div>
+  </div>
   <div class="ovctrl">
     <button class="navbtn" id="d-played" data-act="playedDetail" style="flex:0;padding:13px 14px">Otpjevano?</button>
     <div class="sz"><button data-act="szm">A−</button><button data-act="szp">A+</button></div>
@@ -568,7 +571,8 @@ function openDetail(id){
   document.getElementById('d-tekst').href=lyricsLink(curSong);
   renderRecs(curSong); updatePlayedBtns();
   document.getElementById('detail').classList.add('show');
-  requestAnimationFrame(()=>fitLyrics(ly));
+  document.getElementById('d-scroll').scrollTop=0;
+  requestAnimationFrame(()=>fitLyrics(ly,true));
 }
 function openEdit(id){
   curSong = id? S.songs.find(s=>s.id===id) : {id:uid(),name:'',key:'',sing:'a',lyrics:'',_new:true};
@@ -674,12 +678,16 @@ function pickToggle(id){
    Popuni ekran: laptop -> više stupaca + font skaliran da cijela pjesma stane
    bez scrolla; mobitel -> max teksta (1-2 stupca), a ako ne stane ni na min
    font -> jednostupčano s malo vertikalnog scrolla. A-/A+ = zoom (lzoom). */
-function fitLyrics(el){
+function fitLyrics(el, outer){
   if(!el) return;
   if(el.classList.contains('empty2')||!el.textContent.trim()){
-    ['columnCount','columnGap','columnFill','fontSize','lineHeight','overflow'].forEach(p=>el.style[p]='');
+    ['columnCount','columnGap','columnFill','fontSize','lineHeight','overflow','height'].forEach(p=>el.style[p]='');
     return;
   }
+  // outer = tekst je u vanjskom scroll spremniku (detail): ciljaj jedan ekran,
+  // a ako pjesma ne stane -> pusti je da naraste pa vanjski scroll vodi do preporuka.
+  if(outer){ const sc=el.parentElement; el.style.height=sc.clientHeight+'px'; }
+  else el.style.height='';
   const W=el.clientWidth, H=el.clientHeight; if(!W||!H) return;
   const zoom=S.settings.lzoom||1;
   const wide=W>=720;
@@ -695,17 +703,19 @@ function fitLyrics(el){
     while(lo<=hi){ const m=(lo+hi)>>1; if(fits(c,m)){fit=m;lo=m+1;} else hi=m-1; }
     if(fit && (!best || fit>=best.font)) best={cols:c, font:fit};
   }
-  const scroll=(f)=>{ el.style.columnCount=''; el.style.columnGap=''; el.style.columnFill=''; el.style.fontSize=f+'px'; el.style.overflow='hidden auto'; };
+  // ne stane jedan ekran: detail -> raste (visina auto), vanjski scroll; perf -> vlastiti scroll
+  const grow=(f)=>{ el.style.columnCount=''; el.style.columnGap=''; el.style.columnFill=''; el.style.fontSize=f+'px';
+    if(outer){ el.style.height='auto'; el.style.overflow='visible'; } else el.style.overflow='hidden auto'; };
   if(best){
     const f=Math.round(best.font*zoom);
     el.style.columnCount=best.cols; el.style.fontSize=f+'px';
-    if(ok()) el.style.overflow='hidden';        // sve stalo, bez scrolla
-    else scroll(f);                             // zoom prelio -> 1 stupac + scroll
-  } else { scroll(wide?20:18); }                // ne stane ni na min font -> scroll
+    if(ok()) el.style.overflow='hidden';        // sve stalo na jedan ekran, bez scrolla
+    else grow(f);                               // zoom prelio
+  } else { grow(wide?20:18); }                  // ne stane ni na min font
 }
 function refitOpen(){
   if(document.getElementById('perf').classList.contains('show')) fitLyrics(document.getElementById('p-lyrics'));
-  else if(document.getElementById('detail').classList.contains('show')) fitLyrics(document.getElementById('d-lyrics'));
+  else if(document.getElementById('detail').classList.contains('show')) fitLyrics(document.getElementById('d-lyrics'), true);
 }
 function sz(d){ S.settings.lzoom=Math.max(0.5,Math.min(2.5, Math.round(((S.settings.lzoom||1)+(d>0?0.1:-0.1))*10)/10)); save(); refitOpen(); }
 let _refitT; window.addEventListener('resize',()=>{clearTimeout(_refitT);_refitT=setTimeout(refitOpen,150);});
