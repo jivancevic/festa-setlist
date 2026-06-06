@@ -305,6 +305,7 @@
 /* ---------- State ---------- */
 const KEY='gigdata_v1';
 const DATA_VERSION=3;
+const SETS_VERSION=2;
 /* --- standalone build: localStorage fallback for window.storage --- */
 if(!window.storage){
   window.storage={
@@ -346,10 +347,10 @@ async function load(){
   if((S.seedV||0)<DATA_VERSION){
     const byId=Object.fromEntries(SEED_SONGS.map(s=>[s.id,s]));
     S.songs.forEach(s=>{const sd=byId[s.id]; if(sd){ if(sd.src)s.src=sd.src; if(sd.mood)s.mood=sd.mood; }});
-    const userPlaced=(S.sets||[]).some(st=>st.songIds&&st.songIds.length);
-    if(!userPlaced) S.sets=JSON.parse(JSON.stringify(DEF_SETS));
     S.seedV=DATA_VERSION; seeded=true;
   }
+  /* one-time forced sets refresh (bump SETS_VERSION to push corrected sets); after this, live set edits persist */
+  if((S.setsV||0)<SETS_VERSION){ S.sets=JSON.parse(JSON.stringify(DEF_SETS)); S.setsV=SETS_VERSION; seeded=true; }
   if(!S.played)S.played={};
   if(seeded) save();
   applySettings();
