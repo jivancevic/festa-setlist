@@ -379,7 +379,9 @@ function pmark(id){return !!(S.played&&S.played[id]);}
 function moodLabel(m){return MOODS[m]||'';}
 /* ---------- Live sync (ntfy.sh, keyless) ---------- */
 let playedTs=0, _sse=null, SESSION_START=0;
-function applyRemote(o,live){ if(!o||typeof o!=='object'||(o.ts||0)<playedTs)return; playedTs=o.ts||0; if(o.map)S.played=o.map; if((o.ts||0)>SESSION_START&&Array.isArray(o.sets)&&o.sets.length)S.sets=o.sets; /* sets only from a push sent AFTER this page loaded (not replayed history) */ try{localStorage.setItem('gig_played',JSON.stringify({map:S.played,ts:playedTs}));}catch(e){} save(); renderSongs(); renderSets(); updatePlayedBtns(); }
+function buildEdits(){ const seedById=Object.fromEntries(SEED_SONGS.map(s=>[s.id,s])); const e={}; (S.songs||[]).forEach(s=>{ const sd=seedById[s.id]; if(!sd){ e[s.id]={name:s.name,key:s.key||'',sing:s.sing}; return; } if((s.key||'')!==(sd.key||'')||s.sing!==sd.sing||s.name!==sd.name){ e[s.id]={key:s.key||'',sing:s.sing}; if(s.name!==sd.name)e[s.id].name=s.name; } }); return e; }
+function applyEdits(e){ if(!e||typeof e!=='object')return; for(const id in e){ const ed=e[id]; const s=S.songs.find(x=>x.id===id); if(s){ if('key'in ed)s.key=ed.key; if('sing'in ed)s.sing=ed.sing; if('name'in ed)s.name=ed.name; } else { S.songs.push({id,name:ed.name||id,key:ed.key||'',sing:ed.sing||'a',lyrics:''}); } } }
+function applyRemote(o,live){ if(!o||typeof o!=='object'||(o.ts||0)<playedTs)return; playedTs=o.ts||0; if(o.map)S.played=o.map; const fresh=(o.ts||0)>SESSION_START; /* sets + song-edits only from a push sent AFTER this page loaded (not replayed history) */ if(fresh&&Array.isArray(o.sets)&&o.sets.length)S.sets=o.sets; if(fresh&&o.edits)applyEdits(o.edits); try{localStorage.setItem('gig_played',JSON.stringify({map:S.played,ts:playedTs}));}catch(e){} save(); renderSongs(); renderSets(); updatePlayedBtns(); }
 async function syncPullOnce(){ try{ const r=await fetch(NTFY+'/json?poll=1&since=12h',{cache:'no-store'}); const t=await r.text(); t.trim().split('\n').filter(Boolean).forEach(l=>{try{const m=JSON.parse(l); if(m.event==='message'&&m.message) applyRemote(JSON.parse(m.message),false);}catch(e){}});}catch(e){} }
 async function syncInit(){
   SESSION_START=Date.now();
@@ -389,7 +391,7 @@ async function syncInit(){
   setInterval(syncPullOnce, 5000);
   renderAll(); updatePlayedBtns();
 }
-function pushState(){ playedTs=Math.max(Date.now(),playedTs+1); try{localStorage.setItem('gig_played',JSON.stringify({map:S.played,ts:playedTs}));}catch(e){} try{fetch(NTFY,{method:'POST',body:JSON.stringify({map:S.played||{},sets:S.sets,ts:playedTs})});}catch(e){} }
+function pushState(){ playedTs=Math.max(Date.now(),playedTs+1); try{localStorage.setItem('gig_played',JSON.stringify({map:S.played,ts:playedTs}));}catch(e){} try{fetch(NTFY,{method:'POST',body:JSON.stringify({map:S.played||{},sets:S.sets,edits:buildEdits(),ts:playedTs})});}catch(e){} }
 const pushPlayed=pushState; // back-compat
 function togglePlayed(id){ if(!S.played)S.played={}; if(S.played[id])delete S.played[id]; else S.played[id]=1; pushState(); renderSongs(); renderSets(); updatePlayedBtns(); }
 function updatePlayedBtns(){
@@ -489,7 +491,7 @@ function renderAdd(){
     <div class="field"><label>Prosj. trajanje pjesme (min) — za procjenu setova</label><input id="set-avg" type="number" step="0.5" value="${S.settings.avg}"></div>
     <button class="btn ghost" data-act="saveSettings">Spremi postavke</button>
     <div class="sec">Sinkronizacija (Josip ↔ Pjero)</div>
-    <p class="hint">Oba telefona koja otvore <b>isti link</b> dijele <b>setove i „otpjevano” oznake</b> uživo. Nije potrebna prijava. Ako se uređaji ne slažu, na uređaju s ispravnom verzijom klikni „Pošalji moju verziju”.</p>
+    <p class="hint">Oba telefona koja otvore <b>isti link</b> dijele <b>setove, tonalitete, tko pjeva i „otpjevano” oznake</b> uživo. Nije potrebna prijava. Ako se uređaji ne slažu, na uređaju s ispravnom verzijom klikni „Pošalji moju verziju”.</p>
     <button class="btn primary" data-act="pushMine">📤 Pošalji moju verziju (setovi + oznake)</button>
     <button class="btn ghost" data-act="resetPlayed">Reset „otpjevano”</button>
 
@@ -583,7 +585,7 @@ function saveSong(){
   curSong.lyrics=document.getElementById('e-lyrics').value;
   if(!curSong.name){toast('Upiši naziv');return;}
   if(curSong._new){delete curSong._new;S.songs.push(curSong);}
-  save();renderAll();
+  save();pushState();renderAll();
   document.getElementById('edit').classList.remove('show');
   toast('Spremljeno');
 }
