@@ -378,10 +378,11 @@ function songSets(id){return S.sets.filter(st=>st.songIds.includes(id));}
 function pmark(id){return !!(S.played&&S.played[id]);}
 function moodLabel(m){return MOODS[m]||'';}
 /* ---------- Live sync (ntfy.sh, keyless) ---------- */
-let playedTs=0, _sse=null;
-function applyRemote(o,live){ if(!o||typeof o!=='object'||(o.ts||0)<playedTs)return; playedTs=o.ts||0; if(o.map)S.played=o.map; if(live&&Array.isArray(o.sets)&&o.sets.length)S.sets=o.sets; /* sets only from a live push, never silently on load */ try{localStorage.setItem('gig_played',JSON.stringify({map:S.played,ts:playedTs}));}catch(e){} save(); renderSongs(); renderSets(); updatePlayedBtns(); }
+let playedTs=0, _sse=null, SESSION_START=0;
+function applyRemote(o,live){ if(!o||typeof o!=='object'||(o.ts||0)<playedTs)return; playedTs=o.ts||0; if(o.map)S.played=o.map; if((o.ts||0)>SESSION_START&&Array.isArray(o.sets)&&o.sets.length)S.sets=o.sets; /* sets only from a push sent AFTER this page loaded (not replayed history) */ try{localStorage.setItem('gig_played',JSON.stringify({map:S.played,ts:playedTs}));}catch(e){} save(); renderSongs(); renderSets(); updatePlayedBtns(); }
 async function syncPullOnce(){ try{ const r=await fetch(NTFY+'/json?poll=1&since=12h',{cache:'no-store'}); const t=await r.text(); t.trim().split('\n').filter(Boolean).forEach(l=>{try{const m=JSON.parse(l); if(m.event==='message'&&m.message) applyRemote(JSON.parse(m.message),false);}catch(e){}});}catch(e){} }
 async function syncInit(){
+  SESSION_START=Date.now();
   try{const c=JSON.parse(localStorage.getItem('gig_played')||'null'); if(c){playedTs=c.ts||0; S.played=c.map||{};}}catch(e){}
   await syncPullOnce();
   try{ _sse=new EventSource(NTFY+'/sse'); _sse.onmessage=(e)=>{try{const m=JSON.parse(e.data); if(m.event==='message'&&m.message) applyRemote(JSON.parse(m.message),true);}catch(err){}}; }catch(e){}
