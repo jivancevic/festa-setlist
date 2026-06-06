@@ -180,7 +180,7 @@
   .row.played .nm b{text-decoration:line-through}
   .ss.played{opacity:.45}
   .navbtn.on{background:var(--gold-d);color:var(--gold)}
-  .recs{padding:8px 14px 12px;border-top:1px solid var(--line);max-height:34vh;overflow-y:auto;-webkit-overflow-scrolling:touch}
+  .recs{padding:8px 14px 12px;border-top:1px solid var(--line);max-height:55vh;overflow-y:auto;-webkit-overflow-scrolling:touch}
   .recs-h{font-size:11.5px;color:var(--mut);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin:6px 2px 9px}
   .rec{display:flex;justify-content:space-between;align-items:center;gap:8px;width:100%;text-align:left;padding:10px 12px;background:var(--panel);border:1px solid var(--line);border-radius:10px;margin-bottom:6px;font-size:14px;font-weight:600;color:var(--txt)}
   .rec.played{opacity:.5;text-decoration:line-through}
@@ -379,7 +379,7 @@ function pmark(id){return !!(S.played&&S.played[id]);}
 function moodLabel(m){return MOODS[m]||'';}
 /* ---------- Live sync (ntfy.sh, keyless) ---------- */
 let playedTs=0, _sse=null;
-function applyRemote(o){ if(!o||typeof o!=='object'||!o.map)return; if((o.ts||0)<playedTs)return; playedTs=o.ts||0; S.played=o.map||{}; try{localStorage.setItem('gig_played',JSON.stringify({map:S.played,ts:playedTs}));}catch(e){} renderSongs(); renderSets(); updatePlayedBtns(); }
+function applyRemote(o){ if(!o||typeof o!=='object'||(o.ts||0)<playedTs)return; playedTs=o.ts||0; if(o.map)S.played=o.map; if(Array.isArray(o.sets)&&o.sets.length)S.sets=o.sets; try{localStorage.setItem('gig_played',JSON.stringify({map:S.played,ts:playedTs}));}catch(e){} save(); renderSongs(); renderSets(); updatePlayedBtns(); }
 async function syncPullOnce(){ try{ const r=await fetch(NTFY+'/json?poll=1&since=12h',{cache:'no-store'}); const t=await r.text(); t.trim().split('\n').filter(Boolean).forEach(l=>{try{const m=JSON.parse(l); if(m.event==='message'&&m.message) applyRemote(JSON.parse(m.message));}catch(e){}});}catch(e){} }
 async function syncInit(){
   try{const c=JSON.parse(localStorage.getItem('gig_played')||'null'); if(c){playedTs=c.ts||0; S.played=c.map||{};}}catch(e){}
@@ -388,8 +388,9 @@ async function syncInit(){
   setInterval(syncPullOnce, 5000);
   renderAll(); updatePlayedBtns();
 }
-function pushPlayed(){ playedTs=Date.now(); try{localStorage.setItem('gig_played',JSON.stringify({map:S.played,ts:playedTs}));}catch(e){} try{fetch(NTFY,{method:'POST',body:JSON.stringify({map:S.played,ts:playedTs})});}catch(e){} }
-function togglePlayed(id){ if(!S.played)S.played={}; if(S.played[id])delete S.played[id]; else S.played[id]=1; pushPlayed(); renderSongs(); renderSets(); updatePlayedBtns(); }
+function pushState(){ playedTs=Math.max(Date.now(),playedTs+1); try{localStorage.setItem('gig_played',JSON.stringify({map:S.played,ts:playedTs}));}catch(e){} try{fetch(NTFY,{method:'POST',body:JSON.stringify({map:S.played||{},sets:S.sets,ts:playedTs})});}catch(e){} }
+const pushPlayed=pushState; // back-compat
+function togglePlayed(id){ if(!S.played)S.played={}; if(S.played[id])delete S.played[id]; else S.played[id]=1; pushState(); renderSongs(); renderSets(); updatePlayedBtns(); }
 function updatePlayedBtns(){
   const d=document.getElementById('d-played'); if(d&&curSong){d.classList.toggle('on',pmark(curSong.id)); d.textContent=pmark(curSong.id)?'\u2713 Otpjevano':'Otpjevano?';}
   const p=document.getElementById('p-played'); if(p&&perf.ids[perf.i]){p.classList.toggle('on',pmark(perf.ids[perf.i]));}
@@ -397,8 +398,8 @@ function updatePlayedBtns(){
 function renderRecs(song){
   const el=document.getElementById('d-recs'); if(!el)return;
   if(!song.mood){el.innerHTML='';return;}
-  const recs=S.songs.filter(s=>s.id!==song.id&&s.mood===song.mood).sort((a,b)=>((pmark(a.id)?1:0)-(pmark(b.id)?1:0))||a.name.localeCompare(b.name,'hr')).slice(0,6);
-  el.innerHTML='<div class="recs-h">'+moodLabel(song.mood)+' \u00b7 sli\u010dno po ugo\u0111aju</div>'+recs.map(s=>'<button class="rec '+(pmark(s.id)?'played':'')+'" data-song="'+s.id+'">'+(pmark(s.id)?'\u2713 ':'')+esc(s.name.split('\u00b7')[0].split('\u2014')[0].trim())+'<span>'+esc(s.key||'')+'</span></button>').join('');
+  const recs=S.songs.filter(s=>s.id!==song.id&&s.mood===song.mood).sort((a,b)=>((pmark(a.id)?1:0)-(pmark(b.id)?1:0))||a.name.localeCompare(b.name,'hr'));
+  el.innerHTML='<div class="recs-h">'+moodLabel(song.mood)+' \u00b7 sli\u010dno po ugo\u0111aju ('+recs.length+')</div>'+recs.map(s=>'<button class="rec '+(pmark(s.id)?'played':'')+'" data-song="'+s.id+'">'+(pmark(s.id)?'\u2713 ':'')+esc(s.name.split('\u00b7')[0].split('\u2014')[0].trim())+'<span>'+esc(s.key||'')+'</span></button>').join('');
 }
 
 /* ---------- Render: songs ---------- */
@@ -487,7 +488,8 @@ function renderAdd(){
     <div class="field"><label>Prosj. trajanje pjesme (min) — za procjenu setova</label><input id="set-avg" type="number" step="0.5" value="${S.settings.avg}"></div>
     <button class="btn ghost" data-act="saveSettings">Spremi postavke</button>
     <div class="sec">Sinkronizacija (Josip ↔ Pjero)</div>
-    <p class="hint">Oba telefona koja otvore <b>isti link</b> dijele „otpjevano” oznake uživo. Nije potrebna prijava.</p>
+    <p class="hint">Oba telefona koja otvore <b>isti link</b> dijele <b>setove i „otpjevano” oznake</b> uživo. Nije potrebna prijava. Ako se uređaji ne slažu, na uređaju s ispravnom verzijom klikni „Pošalji moju verziju”.</p>
+    <button class="btn primary" data-act="pushMine">📤 Pošalji moju verziju (setovi + oznake)</button>
     <button class="btn ghost" data-act="resetPlayed">Reset „otpjevano”</button>
 
     <div class="sec">Sigurnosna kopija</div>
@@ -624,12 +626,12 @@ function moveInSet(setId,songId,dir){
   const st=S.sets.find(x=>x.id===setId);const i=st.songIds.indexOf(songId);const j=i+dir;
   if(j<0||j>=st.songIds.length)return;
   [st.songIds[i],st.songIds[j]]=[st.songIds[j],st.songIds[i]];
-  save();renderSets();
+  save();pushState();renderSets();
 }
 function toggleSet(setId){
   const st=S.sets.find(x=>x.id===setId);const i=st.songIds.indexOf(curSong.id);
   if(i>=0)st.songIds.splice(i,1);else st.songIds.push(curSong.id);
-  save();
+  save();pushState();
   document.querySelectorAll('#e-sets [data-toset]').forEach(b=>b.classList.toggle('on',S.sets.find(x=>x.id===b.dataset.toset).songIds.includes(curSong.id)));
 }
 
@@ -658,7 +660,7 @@ function pickToggle(id){
   const st=S.sets.find(x=>x.id===pickSet); if(!st)return;
   const i=st.songIds.indexOf(id);
   if(i>=0){st.songIds.splice(i,1);toast('Maknuto iz seta');}else{st.songIds.push(id);toast('Dodano u set');}
-  save(); renderPick(); renderSets();
+  save(); pushState(); renderPick(); renderSets();
 }
 
 /* ---------- Font size ---------- */
@@ -687,7 +689,7 @@ document.body.addEventListener('click',e=>{
   const a=e.target.closest('[data-act]'); if(a){act(a.dataset.act);return;}
   const up=e.target.closest('[data-up]'); if(up){const[s,g]=up.dataset.up.split('|');moveInSet(s,g,-1);return;}
   const dn=e.target.closest('[data-down]'); if(dn){const[s,g]=dn.dataset.down.split('|');moveInSet(s,g,1);return;}
-  const rm=e.target.closest('[data-rem]'); if(rm){const[s,g]=rm.dataset.rem.split('|');const st=S.sets.find(x=>x.id===s);st.songIds=st.songIds.filter(i=>i!==g);save();renderSets();return;}
+  const rm=e.target.closest('[data-rem]'); if(rm){const[s,g]=rm.dataset.rem.split('|');const st=S.sets.find(x=>x.id===s);st.songIds=st.songIds.filter(i=>i!==g);save();pushState();renderSets();return;}
   const pl=e.target.closest('[data-play]'); if(pl){const st=S.sets.find(x=>x.id===pl.dataset.play);startPerf(st.songIds.slice(),st.name.split('—')[0].trim());return;}
   const ad=e.target.closest('[data-addto]'); if(ad){openPick(ad.dataset.addto);return;}
   const pk=e.target.closest('[data-pick]'); if(pk){pickToggle(pk.dataset.pick);return;}
@@ -708,7 +710,8 @@ function act(a){
     case 'perfFromDetail':document.getElementById('detail').classList.remove('show');startPerf([curSong.id],'Pjesma');break;
     case 'playedDetail':togglePlayed(curSong.id);renderRecs(curSong);break;
     case 'playedPerf':togglePlayed(perf.ids[perf.i]);break;
-    case 'resetPlayed':if(confirm('Resetirati sve „otpjevano” oznake (za oba telefona)?')){S.played={};pushPlayed();renderAll();updatePlayedBtns();toast('Resetirano');}break;
+    case 'pushMine':pushState();toast('Poslano na oba uređaja');break;
+    case 'resetPlayed':if(confirm('Resetirati sve „otpjevano” oznake (za oba telefona)?')){S.played={};pushState();renderAll();updatePlayedBtns();toast('Resetirano');}break;
     case 'prev':step(-1);break;
     case 'next':step(1);break;
     case 'szp':sz(2);break;
