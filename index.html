@@ -568,6 +568,7 @@ function openDetail(id){
   document.getElementById('d-tekst').href=lyricsLink(curSong);
   renderRecs(curSong); updatePlayedBtns();
   document.getElementById('detail').classList.add('show');
+  requestAnimationFrame(()=>fitLyrics(ly));
 }
 function openEdit(id){
   curSong = id? S.songs.find(s=>s.id===id) : {id:uid(),name:'',key:'',sing:'a',lyrics:'',_new:true};
@@ -620,6 +621,7 @@ function showPerf(){
   document.getElementById('p-tekst').href=lyricsLink(s);
   updatePlayedBtns();
   ly.scrollTop=0;
+  requestAnimationFrame(()=>fitLyrics(ly));
   document.getElementById('p-pos').textContent=(perf.i+1)+'/'+perf.ids.length;
   document.getElementById('p-prev').disabled=perf.i===0;
   document.getElementById('p-next').disabled=perf.i===perf.ids.length-1;
@@ -668,8 +670,45 @@ function pickToggle(id){
   save(); queuePush(); renderPick(); renderSets();
 }
 
-/* ---------- Font size ---------- */
-function sz(d){S.settings.lsz=Math.max(15,Math.min(40,(S.settings.lsz||22)+d));document.documentElement.style.setProperty('--lsz',S.settings.lsz+'px');save();}
+/* ---------- Lyrics auto-fit ----------
+   Popuni ekran: laptop -> više stupaca + font skaliran da cijela pjesma stane
+   bez scrolla; mobitel -> max teksta (1-2 stupca), a ako ne stane ni na min
+   font -> jednostupčano s malo vertikalnog scrolla. A-/A+ = zoom (lzoom). */
+function fitLyrics(el){
+  if(!el) return;
+  if(el.classList.contains('empty2')||!el.textContent.trim()){
+    ['columnCount','columnGap','columnFill','fontSize','lineHeight','overflow'].forEach(p=>el.style[p]='');
+    return;
+  }
+  const W=el.clientWidth, H=el.clientHeight; if(!W||!H) return;
+  const zoom=S.settings.lzoom||1;
+  const wide=W>=720;
+  const maxCols=Math.max(1, Math.min(wide?3:2, Math.floor(W/(wide?340:300))));
+  const MAXF=wide?40:30, MINF=14;
+  el.style.lineHeight='1.4'; el.style.columnGap='36px'; el.style.columnFill='auto'; el.style.overflow='hidden';
+  // "stane" = ni horizontalno (prelio u dodatne stupce) ni vertikalno -> nikad ne reže tekst
+  const ok=()=> el.scrollWidth<=el.clientWidth+2 && el.scrollHeight<=el.clientHeight+2;
+  const fits=(c,f)=>{ el.style.columnCount=c; el.style.fontSize=f+'px'; return ok(); };
+  let best=null;
+  for(let c=1;c<=maxCols;c++){
+    let lo=MINF,hi=MAXF,fit=0;
+    while(lo<=hi){ const m=(lo+hi)>>1; if(fits(c,m)){fit=m;lo=m+1;} else hi=m-1; }
+    if(fit && (!best || fit>=best.font)) best={cols:c, font:fit};
+  }
+  const scroll=(f)=>{ el.style.columnCount=''; el.style.columnGap=''; el.style.columnFill=''; el.style.fontSize=f+'px'; el.style.overflow='hidden auto'; };
+  if(best){
+    const f=Math.round(best.font*zoom);
+    el.style.columnCount=best.cols; el.style.fontSize=f+'px';
+    if(ok()) el.style.overflow='hidden';        // sve stalo, bez scrolla
+    else scroll(f);                             // zoom prelio -> 1 stupac + scroll
+  } else { scroll(wide?20:18); }                // ne stane ni na min font -> scroll
+}
+function refitOpen(){
+  if(document.getElementById('perf').classList.contains('show')) fitLyrics(document.getElementById('p-lyrics'));
+  else if(document.getElementById('detail').classList.contains('show')) fitLyrics(document.getElementById('d-lyrics'));
+}
+function sz(d){ S.settings.lzoom=Math.max(0.5,Math.min(2.5, Math.round(((S.settings.lzoom||1)+(d>0?0.1:-0.1))*10)/10)); save(); refitOpen(); }
+let _refitT; window.addEventListener('resize',()=>{clearTimeout(_refitT);_refitT=setTimeout(refitOpen,150);});
 
 /* ---------- Tabs ---------- */
 function tab(name){
