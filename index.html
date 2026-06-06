@@ -191,6 +191,7 @@
     <button class="chip" data-f="b" id="fb">Pjero</button>
     <button class="chip" data-f="both">Oba</button>
     <button class="chip" data-f="todo">Za odsvirati</button>
+    <button class="chip" data-f="done">Otpjevano</button>
     <button class="chip" data-f="noset">Bez seta</button>
   </div>
 </header>
@@ -384,6 +385,7 @@ function renderSongs(){
   if(filter==='a'||filter==='b'||filter==='both') list=list.filter(s=>s.sing===filter);
   if(filter==='noset') list=list.filter(s=>!songSets(s.id).length);
   if(filter==='todo') list=list.filter(s=>!pmark(s.id));
+  if(filter==='done') list=list.filter(s=>pmark(s.id));
   list.sort((a,b)=>a.name.localeCompare(b.name,'hr'));
   document.getElementById('hdrcount').textContent=S.songs.length+' pjesama';
   if(!S.songs.length){ wrap.innerHTML='<div class="empty">Još nema pjesama.<br>Idi na <b>Unos</b>.</div>'; return; }
