@@ -378,16 +378,17 @@ function songSets(id){return S.sets.filter(st=>st.songIds.includes(id));}
 function pmark(id){return !!(S.played&&S.played[id]);}
 function moodLabel(m){return MOODS[m]||'';}
 /* ---------- Live sync (ntfy.sh, keyless) ---------- */
-let playedTs=0, _sse=null, SESSION_START=0;
+let playedTs=0, _sse=null, _synced=false; const _seen=new Set();
 function buildEdits(){ const seedById=Object.fromEntries(SEED_SONGS.map(s=>[s.id,s])); const e={}; (S.songs||[]).forEach(s=>{ const sd=seedById[s.id]; if(!sd){ e[s.id]={name:s.name,key:s.key||'',sing:s.sing}; return; } if((s.key||'')!==(sd.key||'')||s.sing!==sd.sing||s.name!==sd.name){ e[s.id]={key:s.key||'',sing:s.sing}; if(s.name!==sd.name)e[s.id].name=s.name; } }); return e; }
 function applyEdits(e){ if(!e||typeof e!=='object')return; for(const id in e){ const ed=e[id]; const s=S.songs.find(x=>x.id===id); if(s){ if('key'in ed)s.key=ed.key; if('sing'in ed)s.sing=ed.sing; if('name'in ed)s.name=ed.name; } else { S.songs.push({id,name:ed.name||id,key:ed.key||'',sing:ed.sing||'a',lyrics:''}); } } }
-function applyRemote(o,live){ if(!o||typeof o!=='object'||(o.ts||0)<playedTs)return; playedTs=o.ts||0; if(o.map)S.played=o.map; const fresh=(o.ts||0)>SESSION_START; /* sets + song-edits only from a push sent AFTER this page loaded (not replayed history) */ if(fresh&&Array.isArray(o.sets)&&o.sets.length)S.sets=o.sets; if(fresh&&o.edits)applyEdits(o.edits); try{localStorage.setItem('gig_played',JSON.stringify({map:S.played,ts:playedTs}));}catch(e){} save(); renderSongs(); renderSets(); updatePlayedBtns(); }
-async function syncPullOnce(){ try{ const r=await fetch(NTFY+'/json?poll=1&since=12h',{cache:'no-store'}); const t=await r.text(); t.trim().split('\n').filter(Boolean).forEach(l=>{try{const m=JSON.parse(l); if(m.event==='message'&&m.message) applyRemote(JSON.parse(m.message),false);}catch(e){}});}catch(e){} }
+function applyPayload(o,isLive){ if(!o||typeof o!=='object')return; if(o.map&&(o.ts||0)>=playedTs)S.played=o.map; if(isLive){ if(Array.isArray(o.sets)&&o.sets.length)S.sets=o.sets; if(o.edits)applyEdits(o.edits); } if((o.ts||0)>playedTs)playedTs=o.ts||0; try{localStorage.setItem('gig_played',JSON.stringify({map:S.played,ts:playedTs}));}catch(e){} save(); renderSongs(); renderSets(); updatePlayedBtns(); }
+function handleMsg(m){ if(!m||m.event!=='message'||!m.message)return; let o; try{o=JSON.parse(m.message);}catch(e){return;} const id=m.id||''; const isLive=_synced&&!!id&&!_seen.has(id); /* live = an id not seen at load -> immune to device clock differences */ if(id)_seen.add(id); applyPayload(o,isLive); }
+async function syncPullOnce(){ try{ const r=await fetch(NTFY+'/json?poll=1&since=12h',{cache:'no-store'}); const t=await r.text(); t.trim().split('\n').filter(Boolean).forEach(l=>{try{handleMsg(JSON.parse(l));}catch(e){}});}catch(e){} }
 async function syncInit(){
-  SESSION_START=Date.now();
   try{const c=JSON.parse(localStorage.getItem('gig_played')||'null'); if(c){playedTs=c.ts||0; S.played=c.map||{};}}catch(e){}
-  await syncPullOnce();
-  try{ _sse=new EventSource(NTFY+'/sse'); _sse.onmessage=(e)=>{try{const m=JSON.parse(e.data); if(m.event==='message'&&m.message) applyRemote(JSON.parse(m.message),true);}catch(err){}}; }catch(e){}
+  await syncPullOnce();   /* baseline: marks current message ids as seen; sets/edits NOT applied yet */
+  _synced=true;           /* from now, any unseen id is a genuine live push */
+  try{ _sse=new EventSource(NTFY+'/sse'); _sse.onmessage=(e)=>{try{handleMsg(JSON.parse(e.data));}catch(err){}}; }catch(e){}
   setInterval(syncPullOnce, 5000);
   renderAll(); updatePlayedBtns();
 }
