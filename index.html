@@ -389,12 +389,13 @@ async function syncInit(){
   await syncPullOnce();   /* baseline: marks current message ids as seen; sets/edits NOT applied yet */
   _synced=true;           /* from now, any unseen id is a genuine live push */
   try{ _sse=new EventSource(NTFY+'/sse'); _sse.onmessage=(e)=>{try{handleMsg(JSON.parse(e.data));}catch(err){}}; }catch(e){}
-  setInterval(syncPullOnce, 5000);
+  setInterval(syncPullOnce, 30000); /* SSE is the live channel; this is just a slow backup (5s was burning the rate-limit budget) */
   renderAll(); updatePlayedBtns();
 }
-function pushState(){ playedTs=Math.max(Date.now(),playedTs+1); try{localStorage.setItem('gig_played',JSON.stringify({map:S.played,ts:playedTs}));}catch(e){} try{fetch(NTFY,{method:'POST',body:JSON.stringify({map:S.played||{},sets:S.sets,edits:buildEdits(),ts:playedTs})});}catch(e){} }
+async function pushState(){ playedTs=Math.max(Date.now(),playedTs+1); try{localStorage.setItem('gig_played',JSON.stringify({map:S.played,ts:playedTs}));}catch(e){} const body=JSON.stringify({map:S.played||{},sets:S.sets,edits:buildEdits(),ts:playedTs}); for(let a=0;a<2;a++){ try{ const r=await fetch(NTFY,{method:'POST',body}); if(r.ok)return true; if(r.status===429)await new Promise(x=>setTimeout(x,2000)); }catch(e){ await new Promise(x=>setTimeout(x,1500)); } } return false; }
+let _pushT; function queuePush(){ clearTimeout(_pushT); _pushT=setTimeout(pushState,1200); } /* debounce: coalesce rapid edits into one publish (saves rate-limit budget) */
 const pushPlayed=pushState; // back-compat
-function togglePlayed(id){ if(!S.played)S.played={}; if(S.played[id])delete S.played[id]; else S.played[id]=1; pushState(); renderSongs(); renderSets(); updatePlayedBtns(); }
+function togglePlayed(id){ if(!S.played)S.played={}; if(S.played[id])delete S.played[id]; else S.played[id]=1; queuePush(); renderSongs(); renderSets(); updatePlayedBtns(); }
 function updatePlayedBtns(){
   const d=document.getElementById('d-played'); if(d&&curSong){d.classList.toggle('on',pmark(curSong.id)); d.textContent=pmark(curSong.id)?'\u2713 Otpjevano':'Otpjevano?';}
   const p=document.getElementById('p-played'); if(p&&perf.ids[perf.i]){p.classList.toggle('on',pmark(perf.ids[perf.i]));}
@@ -586,7 +587,7 @@ function saveSong(){
   curSong.lyrics=document.getElementById('e-lyrics').value;
   if(!curSong.name){toast('Upiši naziv');return;}
   if(curSong._new){delete curSong._new;S.songs.push(curSong);}
-  save();pushState();renderAll();
+  save();queuePush();renderAll();
   document.getElementById('edit').classList.remove('show');
   toast('Spremljeno');
 }
@@ -630,12 +631,12 @@ function moveInSet(setId,songId,dir){
   const st=S.sets.find(x=>x.id===setId);const i=st.songIds.indexOf(songId);const j=i+dir;
   if(j<0||j>=st.songIds.length)return;
   [st.songIds[i],st.songIds[j]]=[st.songIds[j],st.songIds[i]];
-  save();pushState();renderSets();
+  save();queuePush();renderSets();
 }
 function toggleSet(setId){
   const st=S.sets.find(x=>x.id===setId);const i=st.songIds.indexOf(curSong.id);
   if(i>=0)st.songIds.splice(i,1);else st.songIds.push(curSong.id);
-  save();pushState();
+  save();queuePush();
   document.querySelectorAll('#e-sets [data-toset]').forEach(b=>b.classList.toggle('on',S.sets.find(x=>x.id===b.dataset.toset).songIds.includes(curSong.id)));
 }
 
@@ -664,7 +665,7 @@ function pickToggle(id){
   const st=S.sets.find(x=>x.id===pickSet); if(!st)return;
   const i=st.songIds.indexOf(id);
   if(i>=0){st.songIds.splice(i,1);toast('Maknuto iz seta');}else{st.songIds.push(id);toast('Dodano u set');}
-  save(); pushState(); renderPick(); renderSets();
+  save(); queuePush(); renderPick(); renderSets();
 }
 
 /* ---------- Font size ---------- */
@@ -693,7 +694,7 @@ document.body.addEventListener('click',e=>{
   const a=e.target.closest('[data-act]'); if(a){act(a.dataset.act);return;}
   const up=e.target.closest('[data-up]'); if(up){const[s,g]=up.dataset.up.split('|');moveInSet(s,g,-1);return;}
   const dn=e.target.closest('[data-down]'); if(dn){const[s,g]=dn.dataset.down.split('|');moveInSet(s,g,1);return;}
-  const rm=e.target.closest('[data-rem]'); if(rm){const[s,g]=rm.dataset.rem.split('|');const st=S.sets.find(x=>x.id===s);st.songIds=st.songIds.filter(i=>i!==g);save();pushState();renderSets();return;}
+  const rm=e.target.closest('[data-rem]'); if(rm){const[s,g]=rm.dataset.rem.split('|');const st=S.sets.find(x=>x.id===s);st.songIds=st.songIds.filter(i=>i!==g);save();queuePush();renderSets();return;}
   const pl=e.target.closest('[data-play]'); if(pl){const st=S.sets.find(x=>x.id===pl.dataset.play);startPerf(st.songIds.slice(),st.name.split('—')[0].trim());return;}
   const ad=e.target.closest('[data-addto]'); if(ad){openPick(ad.dataset.addto);return;}
   const pk=e.target.closest('[data-pick]'); if(pk){pickToggle(pk.dataset.pick);return;}
@@ -714,7 +715,7 @@ function act(a){
     case 'perfFromDetail':document.getElementById('detail').classList.remove('show');startPerf([curSong.id],'Pjesma');break;
     case 'playedDetail':togglePlayed(curSong.id);renderRecs(curSong);break;
     case 'playedPerf':togglePlayed(perf.ids[perf.i]);break;
-    case 'pushMine':pushState();toast('Poslano na oba uređaja');break;
+    case 'pushMine':(async()=>{toast('Šaljem…');const ok=await pushState();toast(ok?'Poslano ✓':'⚠️ Nije poslano (limit/mreža). Probaj opet ili promijeni mrežu.');})();break;
     case 'resetPlayed':if(confirm('Resetirati sve „otpjevano” oznake (za oba telefona)?')){S.played={};pushState();renderAll();updatePlayedBtns();toast('Resetirano');}break;
     case 'prev':step(-1);break;
     case 'next':step(1);break;
